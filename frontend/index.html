@@ -7,10 +7,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="static/css/mesto.css">
-<link rel="stylesheet" href="static/css/mesto-owner.css">
+<link rel="stylesheet" href="../static/css/core/mesto.css">
+<link rel="stylesheet" href="../static/css/owner/owner.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="static/css/mesto-map.css">
+<link rel="stylesheet" href="../static/css/map/mesto-map.css">
 </head>
 <body>
 <div class="app">
@@ -23,12 +23,23 @@
 </div>
 <div id="modal" class="modal" hidden><div class="msheet" role="dialog" aria-modal="true" id="msheet"></div></div>
 <div id="toast" role="status" aria-live="polite"></div>
-<script>window.MESTO_CONFIG = {api: false};   /* без бэкенда: всё работает на демо-данных */</script>
-<script src="static/js/mesto-data.js"></script>
-<script src="static/js/mesto-api.js"></script>
-<script src="static/js/mesto-app.js"></script>
-<script src="static/js/mesto-owner.js"></script>
+<script>window.MESTO_CONFIG = {api: false};  </script>
+<script src="../static/js/data/mesto-data.js"></script>
+<script src="../static/js/core/util.js"></script>
+<script src="../static/js/core/state.js"></script>
+<script src="../static/js/core/app.js"></script>
+<script src="../static/js/api/client.js"></script>
+<script src="../static/js/api/zones.js"></script>
+<script src="../static/js/api/rent.js"></script>
+<script src="../static/js/api/owner.js"></script>
+<script src="../static/js/auth/auth.js"></script>
+<script src="../static/js/features/docs/docs.js"></script>
+<script src="../static/js/features/map/map-view.js"></script>
+<script src="../static/js/features/rent/rent.js"></script>
+<script src="../static/js/features/offer/offer.js"></script>
+<script src="../static/js/features/account/account.js"></script>
+<script src="../static/js/features/owner/owner.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="static/js/mesto-map.js"></script>
+<script src="../static/js/features/map/mesto-map.js"></script>
 </body>
 </html>

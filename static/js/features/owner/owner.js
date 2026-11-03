@@ -59,7 +59,7 @@ var OWN = (function(){
     if(ctx === 'account'){
       if(o.status === 'draft' || o.status === 'rejected' || o.status === 'none')
         h += '<button type="button" class="cta" style="margin-top:12px" data-oa="submit">Отправить на проверку</button>' + (complete(o) ? '' : '<p class="hint">Нужно: номер места, документ на место и технический паспорт.</p>');
-      if(o.status === 'pending' && typeof DEMO !== 'undefined' && DEMO)
+      if(o.status === 'pending' && /[?&]demo\b/.test(location.search))
         h += '<div class="demobox"><span class="muted sm">Демо: админки пока нет, исход проверки можно сыграть самой.</span><div class="two"><button type="button" class="chip" data-oa="ok">Подтвердить</button><button type="button" class="chip" data-oa="no">Отклонить</button></div></div>';
     } else if(complete(o)) h += '<p class="hint">Документы уйдут на проверку сразу после создания аккаунта.</p>';
     return h + '</section>';
@@ -104,7 +104,7 @@ var OWN = (function(){
       o.status = 'pending'; o.sentAt = stamp(); o.reason = ''; emit('owner-submit', {owner:o}); redraw(); toast('Отправили на проверку');
     }
     else if(a === 'ok'){ o.status = 'verified'; emit('owner-demo', {status:'verified'}); render(); toast('Подтверждено. Можно сдавать место'); }
-    else if(a === 'no'){ o.status = 'rejected'; o.reason = 'Не виден номер места на документе (демо).'; emit('owner-demo', {status:'rejected'}); render(); }
+    else if(a === 'no'){ o.status = 'rejected'; o.reason = 'Не виден номер места на документе.'; emit('owner-demo', {status:'rejected'}); render(); }
   });
   document.addEventListener('change', function(e){
     var t = e.target, o;
