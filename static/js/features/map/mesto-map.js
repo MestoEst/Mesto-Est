@@ -30,6 +30,7 @@
     map = L.map(holder, { zoomControl: false, preferCanvas: true, zoomSnap: 0.5, minZoom: 15, maxZoom: MAX_ZOOM });
     map.attributionControl.setPrefix(false);
     map.attributionControl.setPosition('topright');
+    fitAll(false);
     L.tileLayer(TILES, { maxNativeZoom: NATIVE_ZOOM, maxZoom: MAX_ZOOM, attribution: ATTR }).addTo(map);
 
     spots(function (S) { S.attach(map); });           /* асфальт под зонами: слой идёт раньше мест */
