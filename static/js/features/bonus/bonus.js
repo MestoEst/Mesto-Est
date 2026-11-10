@@ -56,7 +56,7 @@ var BONUS = (function(){
         return '<div class="coupon"><div><b>'+esc(c.partner)+'</b><span class="muted sm">'+esc(c.offer)+' · '+esc(c.at)+'</span></div><code>'+esc(c.code)+'</code></div>';
       }).join('');
     }
-    return h + '<p class="hint" style="margin-top:12px"><b>Партнёры пока примерные.</b> Это показ механики: настоящих партнёров (кафе, пиццерии, автомойки) подключим при масштабировании проекта. Купон нужно показать при заказе.</p></section>';
+    return h + '<p class="hint" style="margin-top:12px">Купон нужно показать при заказе.</p></section>';
   }
 
   act('coupon', function(v){

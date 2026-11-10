@@ -26,14 +26,14 @@ var AUTH = (function(){
       '<div class="field"><label class="lbl" for="ac-p">Телефон</label><input id="ac-p" type="tel" placeholder="+375" autocomplete="tel"></div>' +
       '<div class="field"><label class="lbl" for="ac-e">Электронная почта</label><input id="ac-e" type="text" inputmode="email" placeholder="name@mail.by" autocomplete="email"></div>' +
       '<div class="field"><label class="lbl" for="ac-w">Пароль</label><input id="ac-w" type="password" placeholder="От 6 знаков" autocomplete="new-password"></div>' +
-      ownCall('card','','signup') + '<div class="note"><b>Код из SMS или письма пока не отправляем.</b> Рассылка кодов платная, поэтому на первом этапе вход без подтверждения. Подтверждение номера и почты подключим на втором этапе, когда будет бюджет.</div>' +
-      consentHtml('signup', SIGNUP_DOCS) + '<button type="button" class="cta" style="margin-top:6px"'+A('signup')+'>Создать аккаунт</button><p class="hint">Паспортные данные попросим позже, перед первой бронью или сдачей места. </p></section>';
+      ownCall('card','','signup') +
+      consentHtml('signup', SIGNUP_DOCS) + '<button type="button" class="cta" style="margin-top:6px"'+A('signup')+'>Создать аккаунт</button></section>';
   }
   function passportCard(){
     return '<section class="card"><div class="lbl">Добавьте паспортные данные</div><p class="muted sm" style="margin:6px 0 12px">Нужно один раз, перед первой бронью или публикацией места. Они подставляются в договор. Другая сторона видит только ваше имя.</p>' +
       '<div class="field"><label class="lbl" for="pp-i">Идентификационный номер</label><input id="pp-i" type="text" placeholder="3010190A001PB1" maxlength="14" autocapitalize="characters" autocomplete="off"></div>' +
       '<div class="field"><label class="lbl" for="pp-n">Серия и номер паспорта</label><input id="pp-n" type="text" placeholder="MP1234567" maxlength="9" autocapitalize="characters" autocomplete="off"></div>' +
-      consentHtml('passport', ['privacy']) + '<button type="button" class="cta" style="margin-top:6px"'+A('passport')+'>Сохранить</button><p class="hint">Хранить будем в зашифрованном виде. </p></section>';
+      consentHtml('passport', ['privacy']) + '<button type="button" class="cta" style="margin-top:6px"'+A('passport')+'>Сохранить</button></section>';
   }
   /* то, что видит гость на вкладке «Аккаунт»: переключатель «Новый аккаунт / Уже есть» и нужная форма */
   function guestHtml(){ return authSwitch() + (state.authMode === 'login' ? loginCard() : signupCard()); }
@@ -65,7 +65,7 @@ var AUTH = (function(){
     state.user = {name:f.name, surname:f.surname, patr:f.patr, phone:f.phone, email:f.email, pid:null, passport:null, owner:ownCall('take', null)};
     state.gate = '';
     emit('signup', {user:state.user, password:f.password});          /* → часть 4: POST /api/auth/register/ */
-    render(true); toast('Аккаунт создан. Паспортные данные добавьте позже');
+    render(true); toast('Аккаунт создан');
   });
   act('login', function(){
     var le = $('#lg-e').value.trim(), lw = $('#lg-w').value;
