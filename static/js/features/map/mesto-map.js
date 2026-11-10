@@ -6,9 +6,15 @@
     soft: { url: TILES, native: NATIVE_ZOOM, attr: ATTR, cls: 'tiles-soft' },   /* OpenStreetMap, приглушённая под цвета страницы (фильтр в mesto-map.css) */
     osm:  { url: TILES, native: NATIVE_ZOOM, attr: ATTR, cls: '' }              /* обычная OpenStreetMap */
   };
-  /* по умолчанию ровный бежевый фон без карты, как в ролике: на нём видны только асфальтовые капсулы, места и машинки.
-     Настоящую карту можно вернуть в MESTO_CONFIG.basemap: 'soft' (приглушённая OpenStreetMap) или 'osm' (обычная) */
-  function defaultBasemap() { return 'flat'; }
+  /* какая подложка: адрес ?map=flat | soft | osm главнее всего; потом MESTO_CONFIG.basemap; иначе приглушённая карта OpenStreetMap.
+     При открытии двойным кликом (file://) сайт плиток блокирует запросы, поэтому там сразу ровный бежевый фон, как в ролике */
+  function defaultBasemap() {
+    var q = /[?&]map=(flat|soft|osm)\b/.exec(location.search);
+    if (q) return q[1];
+    var c = window.MESTO_CONFIG && window.MESTO_CONFIG.basemap;
+    if (c) return c;
+    return (location.protocol === 'file:' && !/Electron/.test(navigator.userAgent)) ? 'flat' : 'soft';
+  }
 
   var holder = null, map = null, markLayer = null, youMarker = null, items = [];
 
@@ -35,12 +41,18 @@
 
   function init() {
     map = L.map(holder, { zoomControl: false, preferCanvas: true, zoomSnap: 0.5, minZoom: 15, maxZoom: MAX_ZOOM });
-    /* подложка: MESTO_CONFIG.basemap = 'flat' (по умолчанию: ровный бежевый фон, как в ролике), 'soft' (приглушённая OpenStreetMap) или 'osm' (обычная) */
-    var bm = BASEMAPS[(window.MESTO_CONFIG && window.MESTO_CONFIG.basemap) || defaultBasemap()];
+    /* подложка: 'soft' (приглушённая OpenStreetMap), 'osm' (обычная) или 'flat' (ровный бежевый фон, как в ролике); выбор в defaultBasemap() */
+    var bm = BASEMAPS[defaultBasemap()];
     if (bm) { map.attributionControl.setPrefix(false); map.attributionControl.setPosition('topright'); }
     else map.removeControl(map.attributionControl);
     fitAll(false);   /* первый вид нужен ДО слоёв: с preferCanvas слои мест иначе падают (renderer ещё не готов) и вместо карты остаётся заглушка */
-    if (bm) L.tileLayer(bm.url, { maxNativeZoom: bm.native, maxZoom: MAX_ZOOM, attribution: bm.attr, className: bm.cls }).addTo(map);
+    if (bm) (function () {
+    var tl = L.tileLayer(bm.url, { maxNativeZoom: bm.native, maxZoom: MAX_ZOOM, attribution: bm.attr, className: bm.cls }).addTo(map);
+    /* если плитки не грузятся (нет интернета, блокировка), остаётся ровный фон, без битых квадратов */
+    var tOk = 0, tBad = 0;
+    tl.on('tileload', function () { tOk++; });
+    tl.on('tileerror', function () { if (++tBad >= 3 && !tOk && map.hasLayer(tl)) { map.removeLayer(tl); map.attributionControl.remove(); } });
+    })();
 
     spots(function (S) { S.attach(map); });           /* асфальт под зонами: слой идёт раньше мест */
 
