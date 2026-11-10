@@ -2,6 +2,11 @@
   var TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
   var ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
   var NATIVE_ZOOM = 19, MAX_ZOOM = 21;
+  var BASEMAPS = {
+    light: { url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', sub: 'abcd', native: 20,
+             attr: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>' },
+    osm:   { url: TILES, sub: 'abc', native: NATIVE_ZOOM, attr: ATTR }
+  };
 
   var holder = null, map = null, markLayer = null, youMarker = null, items = [];
 
@@ -28,12 +33,13 @@
 
   function init() {
     map = L.map(holder, { zoomControl: false, preferCanvas: true, zoomSnap: 0.5, minZoom: 15, maxZoom: MAX_ZOOM });
-    /* фон карты: по умолчанию ровный (как в ролике), без подложки. Подложка OpenStreetMap включается флагом MESTO_CONFIG.basemap = 'osm' */
-    var osm = !!(window.MESTO_CONFIG && window.MESTO_CONFIG.basemap === 'osm');
-    if (osm) { map.attributionControl.setPrefix(false); map.attributionControl.setPosition('topright'); }
+    /* подложка: MESTO_CONFIG.basemap = 'light' (по умолчанию, светлая карта CARTO Positron: улицы и дома без шума, в тон страницы),
+       'osm' (обычная OpenStreetMap) или 'flat' (ровный бежевый фон без карты, как в ролике) */
+    var bm = BASEMAPS[(window.MESTO_CONFIG && window.MESTO_CONFIG.basemap) || 'light'];
+    if (bm) { map.attributionControl.setPrefix(false); map.attributionControl.setPosition('topright'); }
     else map.removeControl(map.attributionControl);
     fitAll(false);   /* первый вид нужен ДО слоёв: с preferCanvas слои мест иначе падают (renderer ещё не готов) и вместо карты остаётся заглушка */
-    if (osm) L.tileLayer(TILES, { maxNativeZoom: NATIVE_ZOOM, maxZoom: MAX_ZOOM, attribution: ATTR }).addTo(map);
+    if (bm) L.tileLayer(bm.url, { subdomains: bm.sub, maxNativeZoom: bm.native, maxZoom: MAX_ZOOM, attribution: bm.attr }).addTo(map);
 
     spots(function (S) { S.attach(map); });           /* асфальт под зонами: слой идёт раньше мест */
 
