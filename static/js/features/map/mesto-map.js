@@ -39,6 +39,14 @@
     else map.fitBounds(allBounds(), L.extend(o, { animate: false }));
   }
 
+  var touched = false;
+  function openSel() {
+    if (touched || !map) return;
+    map.invalidateSize({ animate: false, pan: false });
+    var z0 = zone(state.sel);
+    if (z0 && z0.bc && z0.bc.length) map.fitBounds(L.latLngBounds(z0.bc.map(ll)), L.extend({ maxZoom: 19.5, animate: false }, padding()));
+  }
+
   function init() {
     map = L.map(holder, { zoomControl: false, preferCanvas: true, zoomSnap: 0.5, minZoom: 15, maxZoom: MAX_ZOOM });
     /* подложка: 'soft' (приглушённая OpenStreetMap), 'osm' (обычная) или 'flat' (ровный бежевый фон, как в ролике); выбор в defaultBasemap() */
@@ -68,8 +76,12 @@
     fitAll(false);
     map.setMaxBounds(allBounds().pad(2));
     /* открываем сразу выбранный двор: места, номера и машинки видны с первого экрана. Весь район: кнопка справа */
-    var z0 = zone(state.sel);
-    if (z0 && z0.bc && z0.bc.length) map.fitBounds(L.latLngBounds(z0.bc.map(ll)), L.extend({ maxZoom: 19.5, animate: false }, padding()));
+    openSel();
+    /* размер блока карты в первые мгновения может ещё меняться (шрифты, стили, окно браузера): пока человек не трогал карту, подгоняем первый вид под итоговый размер */
+    [60, 300, 900, 2000].forEach(function (t) { setTimeout(openSel, t); });
+    window.addEventListener('load', openSel);
+    if (window.ResizeObserver) { var raf = 0; new ResizeObserver(function () { cancelAnimationFrame(raf); raf = requestAnimationFrame(openSel); }).observe(holder); }
+    ['pointerdown', 'wheel', 'keydown'].forEach(function (ev) { holder.addEventListener(ev, function () { touched = true; }, true); });
     map.on('zoomend', draw);
     spots(function (S) { S.start(); });
   }
@@ -113,23 +125,27 @@
   }
 
   function focusZone(id) {
+    touched = true;
     var z = zone(id);
     if (!z || !map) return;
     if (z.bc && z.bc.length) map.fitBounds(L.latLngBounds(z.bc.map(ll)), L.extend({ maxZoom: 20 }, padding()));
     else if (z.c) map.setView(ll(z.c), 19);
   }
   function focusStreet(id) {
+    touched = true;
     var s = street(id);
     if (!s || !map) return;
     map.fitBounds(L.latLngBounds(s.bc.map(ll)), L.extend({ maxZoom: 19 }, padding()));
   }
   function focusSpot(zid, k) {
+    touched = true;
     var z = zone(zid);
     if (!z || !map || !z.bays[k]) return;
     map.fitBounds(L.latLngBounds([ll(z.bays[k].c)]), L.extend({ maxZoom: 20.5 }, padding()));
   }
 
   function locate() {
+    touched = true;
     if (!navigator.geolocation) { toast('Геолокация недоступна в этом браузере'); return; }
     navigator.geolocation.getCurrentPosition(function (p) {
       var lat = p.coords.latitude, lng = p.coords.longitude;
