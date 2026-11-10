@@ -117,7 +117,7 @@ act('mark', function(v){
   } else state.marks.push(m);
   state.last = m; state.helped += 1; m.award = award ? award.pts : 0;
   emit('mark', {mark:m, gps:state.gps, spot:k != null ? k + 1 : null});
-  toast('Отмечено в '+m.time + (award && award.pts ? '. +'+award.pts+' баллов' : (award && award.cool ? '. Баллы за это место уже начислены' : '. Увидят соседи')));
+  toast('Отмечено в '+m.time + (award && award.pts ? '. +'+award.pts+' баллов' : '. '+({cool:'Баллы за это место уже начислены', fast:'Баллы можно получать раз в 2 минуты', cap:'На сегодня баллы за отметки закончились', far:'Баллы начисляются, когда вы рядом с зоной'}[award && award.why] || 'Увидят соседи')));
   refreshMap();
 });
 act('undo', function(){

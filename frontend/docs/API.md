@@ -92,7 +92,7 @@
  "hour_price": 3, "day_price": 15, "month_price": 180, "free": false, "when_text": "сб–вс, весь день",
  "avail": ["weekend", "tomorrow"], "walk": 3, "covered": true, "ev": false, "mine": false, "verified": true}
 ```
-`avail`: `today`, `tomorrow`, `weekend`. Цены в рублях, копейки через точку. `null`, если формат не сдаётся. Номер места (`spot`) и улицу (`street`) отдаём всегда: гость видит их в объявлении, при бронировании и после подтверждения.
+`avail`: `today`, `tomorrow`, `weekend`. Цены в белорусских рублях (BYN, на экране «руб.» или «Br»), копейки через точку. `null`, если формат не сдаётся. Номер места (`spot`) и улицу (`street`) отдаём всегда: гость видит их в объявлении, при бронировании и после подтверждения.
 
 **POST `/api/listings/`**:
 ```json

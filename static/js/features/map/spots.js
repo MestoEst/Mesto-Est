@@ -105,7 +105,7 @@ var SPOTS = (function(){
     z.bays.forEach(function(b, k){
       var free = isFree(z, k), sel = cur === k, ls = showRent && listingAt(z.id, k);
       h += '<button type="button" class="bay '+(free ? 'free' : 'busy')+(sel ? ' sel' : '')+(ls ? ' rent' : '')+'"'+A(action, k)+' aria-pressed="'+sel+'" aria-label="Место №'+(k+1)+', '+(free ? 'свободно' : 'занято')+(ls ? ', сдаётся' : '')+'">' +
-        (free ? '' : '<span class="car">'+carSVG(variant(z, k), '100%', '100%')+'</span>') + '<i>'+(k + 1)+'</i>' + (ls ? '<u>₽</u>' : '') + '</button>';
+        (free ? '' : '<span class="car">'+carSVG(variant(z, k), '100%', '100%')+'</span>') + '<i>'+(k + 1)+'</i>' + (ls ? '<u>Br</u>' : '') + '</button>';
     });
     return h + '</div>';
   }
