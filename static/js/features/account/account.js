@@ -6,7 +6,7 @@ function accountView(){
   var docs = '<section class="card"><div class="lbl" style="margin-bottom:10px">Документы</div><div class="chips wrap">' + dl.map(function(d){
     var ok = !!state.accepted[d[0]];
     return '<button type="button" class="chip'+(ok ? ' acc' : '')+'"'+A('doc',d[0])+'>'+(ok ? ic('check', 15) : '')+d[1]+'</button>';
-  }).join('') + '</div><p class="hint" style="margin-top:10px">Галочка означает, что вы приняли документ. В каждой форме (регистрация, бронь, публикация места) каждый документ принимается отдельной галочкой.</p></section>';
+  }).join('') + '</div></section>';
   var bonus = BONUS.card();
   if(!state.user){
     return '<h1 class="h1">Аккаунт</h1>' + (state.gate ? '<div class="card" style="background:var(--lime-tint);border-color:transparent"><b>'+state.gate+'</b></div>' : '') +

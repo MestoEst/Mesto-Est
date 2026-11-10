@@ -24,7 +24,7 @@ function dock(){
   if(L === 'access'){
     return '<section class="dock"><div class="nm">Места для людей с инвалидностью</div><div class="sub">Статус обновляют жители</div><ul class="zl" style="margin-top:12px">' +
       DISTRICT.accessible.map(function(a){ return '<li><div class="irow"><span>'+a.name+'</span><span class="st '+a.status+'">'+(a.status==='free'?'Свободно':'Занято')+'</span></div></li>'; }).join('') +
-      '</ul><div class="dockhint" style="font-size:14px;color:var(--ink);margin-top:14px">Место занято без права? Позвоните в службу.</div><a href="tel:" class="dbtn" onclick="return false">'+ic('phone')+' Позвонить: '+ACCESS_PHONE+'</a><div class="dockhint">Номер службы уточним (скорее всего ГАИ района). Приложение ничего не отправляет, вы звоните сами.</div></section>';
+      '</ul></section>';
   }
   if(L === 'ev'){
     return '<section class="dock"><div class="nm">Места с зарядкой</div><div class="sub">Электричество по договорённости с владельцем</div><ul class="zl" style="margin-top:12px">' +

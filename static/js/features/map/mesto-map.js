@@ -28,10 +28,12 @@
 
   function init() {
     map = L.map(holder, { zoomControl: false, preferCanvas: true, zoomSnap: 0.5, minZoom: 15, maxZoom: MAX_ZOOM });
-    map.attributionControl.setPrefix(false);
-    map.attributionControl.setPosition('topright');
-    fitAll(false);
-    L.tileLayer(TILES, { maxNativeZoom: NATIVE_ZOOM, maxZoom: MAX_ZOOM, attribution: ATTR }).addTo(map);
+    /* фон карты: по умолчанию ровный (как в ролике), без подложки. Подложка OpenStreetMap включается флагом MESTO_CONFIG.basemap = 'osm' */
+    var osm = !!(window.MESTO_CONFIG && window.MESTO_CONFIG.basemap === 'osm');
+    if (osm) { map.attributionControl.setPrefix(false); map.attributionControl.setPosition('topright'); }
+    else map.removeControl(map.attributionControl);
+    fitAll(false);   /* первый вид нужен ДО слоёв: с preferCanvas слои мест иначе падают (renderer ещё не готов) и вместо карты остаётся заглушка */
+    if (osm) L.tileLayer(TILES, { maxNativeZoom: NATIVE_ZOOM, maxZoom: MAX_ZOOM, attribution: ATTR }).addTo(map);
 
     spots(function (S) { S.attach(map); });           /* асфальт под зонами: слой идёт раньше мест */
 
