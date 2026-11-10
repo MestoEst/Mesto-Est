@@ -242,14 +242,14 @@ var SPOTS = (function(){
     });
   }
 
-  /* демо: машины сами приезжают и уезжают, чтобы было видно, как карта оживает.
-     В боевой версии вместо этого придут отметки жителей и is_occupied с сервера */
+  /* демо-движение: машины сами приезжают и уезжают. По умолчанию ВЫКЛЮЧЕНО: машинки меняются только когда человек отмечает место.
+     Включить для показа: добавить к адресу ?live. В боевой версии вместо этого придут отметки жителей и is_occupied с сервера */
   var SIM_MS = 2300, pressing = false;
   document.addEventListener('pointerdown', function(){ pressing = true; }, true);
   document.addEventListener('pointerup', function(){ setTimeout(function(){ pressing = false; }, 250); }, true);
   document.addEventListener('pointercancel', function(){ pressing = false; }, true);
   function startDemo(){
-    if(simT || /[?&]still\b/.test(location.search)) return;
+    if(simT || !/[?&]live\b/.test(location.search)) return;
     simT = setInterval(tick, SIM_MS);
   }
   function tick(){
