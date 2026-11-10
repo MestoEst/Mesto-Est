@@ -82,7 +82,7 @@
     var fb = gar.length ? gar[0].id : (order[0] ? order[0].id : '');
     DISTRICT.listings.forEach(function(l){ if(!DISTRICT.zones.some(function(z){ return z.id === l.zone; })) l.zone = fb; });
   }
-  var STORE = 'me_map_v1';
+  var STORE = 'me_map_v2';   /* старый ключ me_map_v1 держал в браузере устаревшие зоны и ломал вид карты */
   function loadSaved(){
     try { var r = JSON.parse(localStorage.getItem(STORE) || 'null'); if(r && r.length && r.some(function(f){ return (f.properties || {}).t !== 'garage' && f.geometry && f.geometry.type === 'LineString'; })) return r; } catch(err){}
     return null;
