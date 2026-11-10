@@ -5,7 +5,7 @@
 
   function mapOwner(o){
     o = o || {};
-    return {on:!!o.is_owner, parking:o.parking || 'gA', addr:o.addr || '', place:o.place || '', status:o.status || (o.is_owner ? 'draft' : 'none'), sentAt:o.submitted_at || '', reason:o.reject_reason || '',
+    return {on:!!o.is_owner, parking:o.parking || 'other', addr:o.addr || '', place:o.place || '', status:o.status || (o.is_owner ? 'draft' : 'none'), sentAt:o.submitted_at || '', reason:o.reject_reason || '',
       docs:(o.documents || []).map(function(d){ return {id:'s' + d.id, sid:d.id, kind:d.kind, name:d.name, size:d.size}; })};
   }
   API.map.owner = mapOwner;                 /* auth/auth.js использует это при разборе ответа /api/me/ */

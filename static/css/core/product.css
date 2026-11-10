@@ -1,0 +1,40 @@
+/* Место есть: номера мест в карточках, галочки на документы, лимит цены, бонусы и купоны.
+   Подключается после css/core/mesto.css. */
+.nn{ display:inline-block; background:var(--lime); color:#0E100D; border-radius:8px; padding:1px 8px; margin-right:8px; font-weight:700; letter-spacing:-.02em }
+.l-act{ display:flex; gap:8px; flex:none }
+.round.soft{ background:var(--bg); color:var(--ink); border:1px solid var(--line) }
+
+/* галочки: на каждый документ отдельная */
+.cons{ margin:10px 0 4px }
+.cons-row{ min-height:44px; align-items:flex-start; padding:7px 0 }
+.cons-row .ck{ margin-top:1px }
+.cons-row span{ line-height:1.35 }
+.chip.acc{ background:var(--lime-tint); display:inline-flex; align-items:center; gap:6px }
+
+/* лимит цены */
+.limit{ font-size:12.5px; color:var(--ink2); margin:6px 2px 0 }
+.limit.bad{ color:#C4351C; font-weight:600 }
+.inp.bad input{ border-color:#C4351C; box-shadow:0 0 0 1px #C4351C }
+
+/* бонусы */
+.bline{ margin-top:12px; display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:10px; background:var(--surface); border-radius:16px; padding:10px 14px; font-size:13px }
+.bline .bl1{ display:grid; line-height:1.15 }
+.bline .bl1 span{ color:var(--ink2); font-size:12px }
+.bline .bl1 b{ font-size:17px; letter-spacing:-.03em }
+.bline .linkbtn{ font-size:13px; white-space:nowrap }
+.bbar{ height:9px; border-radius:99px; background:var(--soft); overflow:hidden }
+.bbar i{ display:block; height:100%; background:var(--lime); border-radius:99px; box-shadow:inset 0 0 0 1px rgba(14,16,13,.18); transition:width .4s }
+.bpts{ display:flex; align-items:baseline; gap:8px; margin:12px 0 8px }
+.bpts b{ font-size:52px; font-weight:600; letter-spacing:-.06em; line-height:.9 }
+.bpts span{ color:var(--ink2); font-size:14px }
+.partners{ margin-top:14px }
+.prow{ display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--bg); border-radius:16px; padding:10px 12px }
+.pi{ display:grid; gap:3px; min-width:0 }
+.tag{ width:fit-content; font-size:11px; font-weight:500; background:var(--lime-tint); color:var(--ink); border-radius:99px; padding:2px 9px }
+.coupon{ display:flex; justify-content:space-between; align-items:center; gap:10px; border:1.5px dashed var(--ink2); border-radius:14px; padding:10px 12px; margin-bottom:8px }
+.coupon > div{ display:grid; min-width:0 }
+.coupon code{ font-family:inherit; font-weight:700; letter-spacing:.04em; background:var(--lime); color:#0E100D; border-radius:8px; padding:5px 9px; white-space:nowrap }
+.card.bonus{ background:var(--surface) }
+@media (prefers-reduced-motion: reduce){ .bbar i{ transition:none } }
+.zl.partners button, .zl.partners .chip{ width:auto; flex:none; min-height:40px; display:inline-flex; justify-content:center }
+.zl.partners li{ list-style:none }

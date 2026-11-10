@@ -8,7 +8,7 @@
      4. СЕРВЕР    запросы к Django; работают, когда в шаблоне включён флаг  auth: true
    Пока флаг выключен, аккаунт живёт только в памяти страницы (демо). Подключается после api/client.js. */
 var AUTH = (function(){
-  var ev = API.ev, on = API.on, say = API.say, soft = API.soft;
+  var ev = API.ev, on = API.on, say = API.say, soft = API.soft, SIGNUP_DOCS = ['terms', 'privacy'];
 
   /* ================= 1. ФОРМЫ ================= */
   function authSwitch(){
@@ -27,13 +27,13 @@ var AUTH = (function(){
       '<div class="field"><label class="lbl" for="ac-e">Электронная почта</label><input id="ac-e" type="text" inputmode="email" placeholder="name@mail.by" autocomplete="email"></div>' +
       '<div class="field"><label class="lbl" for="ac-w">Пароль</label><input id="ac-w" type="password" placeholder="От 6 знаков" autocomplete="new-password"></div>' +
       ownCall('card','','signup') + '<div class="note"><b>Код из SMS или письма пока не отправляем.</b> Рассылка кодов платная, поэтому на первом этапе вход без подтверждения. Подтверждение номера и почты подключим на втором этапе, когда будет бюджет.</div>' +
-      '<button type="button" class="cta"'+A('signup')+'>Создать аккаунт</button><p class="hint">Паспортные данные попросим позже, перед первой бронью или сдачей места. </p></section>';
+      consentHtml('signup', SIGNUP_DOCS) + '<button type="button" class="cta" style="margin-top:6px"'+A('signup')+'>Создать аккаунт</button><p class="hint">Паспортные данные попросим позже, перед первой бронью или сдачей места. </p></section>';
   }
   function passportCard(){
     return '<section class="card"><div class="lbl">Добавьте паспортные данные</div><p class="muted sm" style="margin:6px 0 12px">Нужно один раз, перед первой бронью или публикацией места. Они подставляются в договор. Другая сторона видит только ваше имя.</p>' +
       '<div class="field"><label class="lbl" for="pp-i">Идентификационный номер</label><input id="pp-i" type="text" placeholder="3010190A001PB1" maxlength="14" autocapitalize="characters" autocomplete="off"></div>' +
       '<div class="field"><label class="lbl" for="pp-n">Серия и номер паспорта</label><input id="pp-n" type="text" placeholder="MP1234567" maxlength="9" autocapitalize="characters" autocomplete="off"></div>' +
-      '<button type="button" class="cta"'+A('passport')+'>Сохранить</button><p class="hint">Хранить будем в зашифрованном виде. </p></section>';
+      consentHtml('passport', ['privacy']) + '<button type="button" class="cta" style="margin-top:6px"'+A('passport')+'>Сохранить</button><p class="hint">Хранить будем в зашифрованном виде. </p></section>';
   }
   /* то, что видит гость на вкладке «Аккаунт»: переключатель «Новый аккаунт / Уже есть» и нужная форма */
   function guestHtml(){ return authSwitch() + (state.authMode === 'login' ? loginCard() : signupCard()); }
@@ -60,7 +60,8 @@ var AUTH = (function(){
   act('authmode', function(v){ state.authMode = v; render(); });
   act('signup', function(){
     var f = {name:$('#ac-n').value.trim(), surname:$('#ac-s').value.trim(), patr:$('#ac-o').value.trim(), phone:$('#ac-p').value.trim(), email:$('#ac-e').value.trim(), password:$('#ac-w').value};
-    var err = checkSignup(f); if(err){ toast(err); return; }
+    var err = checkSignup(f) || consentCheck('signup', SIGNUP_DOCS); if(err){ toast(err); return; }
+    consentReset('signup');
     state.user = {name:f.name, surname:f.surname, patr:f.patr, phone:f.phone, email:f.email, pid:null, passport:null, owner:ownCall('take', null)};
     state.gate = '';
     emit('signup', {user:state.user, password:f.password});          /* → часть 4: POST /api/auth/register/ */
@@ -74,7 +75,8 @@ var AUTH = (function(){
   });
   act('passport', function(){
     var pid = $('#pp-i').value.trim().toUpperCase(), pn = $('#pp-n').value.trim().toUpperCase();
-    var err = checkPassport(pid, pn); if(err){ toast(err); return; }
+    var err = checkPassport(pid, pn) || consentCheck('passport', ['privacy']); if(err){ toast(err); return; }
+    consentReset('passport');
     state.user.pid = pid; state.user.passport = pn.slice(0,2)+'•••'+pn.slice(-2); state.gate = '';
     emit('passport', {pid:pid, passport:pn});                        /* → PUT /api/me/passport/ */
     render(true); toast('Данные сохранены');

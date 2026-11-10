@@ -1,0 +1,72 @@
+/* Место есть: красивые места, машинки, номера, ряд мест в панели.
+   Подключается после css/map/mesto-map.css. Цвета лежат в переменных, тёмная тема переопределяет их ниже. */
+:root{ --asph:#E4DFD2; --slot:#D3CDBD }
+:root[data-theme="dark"]{ --asph:#1E2318; --slot:#2D3426 }
+
+/* ---- на карте ---- */
+.sc-car,.sp-num,.sp-zone{ background:none; border:0; pointer-events:none }
+.sc-rot{ transform-origin:50% 50% }
+.sc-slide{ width:100%; height:100%; transition:transform .95s cubic-bezier(.25,.7,.2,1), opacity .95s ease; filter:drop-shadow(0 1px 1.5px rgba(14,16,13,.4)) }
+.sc-slide.arrive,.sc-slide.leave{ transform:translateY(var(--run,40px)); opacity:0 }
+.sp-num span{ position:absolute; left:0; top:0; transform:translate(-50%,-50%); font-weight:700; letter-spacing:-.02em; line-height:1; white-space:nowrap }
+.sp-num .f{ color:#0E100D }
+.sp-num .b{ color:#fff; background:rgba(14,16,13,.78); padding:.14em .42em; border-radius:99px }
+.sp-zone span{ position:absolute; left:0; top:0; transform:translate(-50%,-50%); white-space:nowrap; font-size:11.5px; font-weight:600; background:var(--bg); color:var(--ink); border-radius:99px; padding:3px 9px; box-shadow:0 1px 5px rgba(0,0,0,.3) }
+.sp-street{ background:none; border:0; pointer-events:auto; cursor:pointer }
+.sp-street span{ position:absolute; left:0; top:0; transform:translate(-50%,-50%); white-space:nowrap; display:inline-flex; align-items:center; gap:6px; font-size:12.5px; background:var(--btn-bg); color:var(--btn-fg); border-radius:99px; padding:6px 12px; box-shadow:0 2px 8px rgba(0,0,0,.35) }
+.sp-street b{ font-weight:600 }
+.sp-street i{ font-style:normal; font-weight:700; background:var(--lime); color:#0E100D; border-radius:99px; padding:1px 7px }
+
+/* ---- ряд мест зоны в панели ---- */
+.strip{ display:flex; gap:6px; overflow-x:auto; padding:12px 12px 12px; margin:12px 0 0; background:var(--asph); border-radius:20px; scrollbar-width:none; scroll-behavior:smooth }
+.strip::-webkit-scrollbar{ display:none }
+.bay{ flex:none; position:relative; width:46px; height:66px; border:0; border-radius:12px; padding:0; font-family:inherit; display:block; color:var(--ink) }
+.bay i{ font-style:normal; font-weight:700; position:absolute; left:0; right:0; text-align:center; letter-spacing:-.02em }
+.bay.free{ background:var(--lime); color:#0E100D }
+.bay.free i{ top:50%; transform:translateY(-50%); font-size:19px }
+.bay.busy{ background:var(--slot) }
+.bay.busy i{ bottom:5px; font-size:12.5px; color:var(--ink2) }
+.bay .car{ position:absolute; left:50%; top:5px; width:19px; height:40px; transform:translateX(-50%); filter:drop-shadow(0 1px 1px rgba(14,16,13,.35)) }
+.bay.sel{ box-shadow:0 0 0 2.5px var(--ink) }
+.bay u{ position:absolute; top:-5px; right:-5px; width:19px; height:19px; border-radius:50%; background:var(--ink); color:var(--lime); font:700 11px/19px 'Onest',system-ui,sans-serif; text-decoration:none; text-align:center }
+.bay:focus-visible{ outline:2.5px solid var(--ink); outline-offset:2px }
+.spotrow{ display:flex; align-items:center; gap:12px; margin-top:10px; background:var(--surface); border-radius:18px; padding:10px 12px }
+.spotrow .sn{ min-width:58px; height:44px; padding:0 10px; border-radius:14px; background:var(--lime); color:#0E100D; font-weight:700; font-size:21px; letter-spacing:-.03em; display:grid; place-items:center }
+.spotrow .sb{ flex:1; min-width:0; display:grid }
+.spotrow .sb b{ font-size:15px; font-weight:600 }
+.spotrow .sb span{ font-size:12.5px; color:var(--ink2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.spotnote{ margin-top:8px }
+.markfor{ font-size:13px; color:var(--ink2); margin:12px 2px 0 }
+.markfor b{ color:var(--ink); font-weight:600 }
+.legend .lg-car{ width:9px; height:16px; border-radius:4px; background:#2e4259; border:1px solid rgba(0,0,0,.25) }
+@media (prefers-reduced-motion: reduce){ .sc-slide{ transition:none } .strip{ scroll-behavior:auto } }
+
+/* ---- телефон и планшет: панель компактнее, чтобы карта оставалась на виду ---- */
+.grab{ display:none }
+@media (max-width:959px){
+  .grab{ display:block; width:100%; height:22px; margin:-6px 0 2px; border:0; background:transparent; padding:0 }
+  .grab i{ display:block; width:42px; height:5px; border-radius:99px; background:var(--line); margin:8px auto 0 }
+  .sheet{ padding:12px 12px 8px }
+  .sheet .rowi{ padding:8px 12px; border-radius:18px }
+  .sheet .rowi .ico{ width:34px; height:34px }
+  .sheet .rowi b{ font-size:15px }
+  .sheet .stat{ margin:10px 2px 0; gap:10px }
+  .sheet .stat .big{ font-size:38px }
+  .sheet .stat .bt span{ display:none }
+  .sheet .tagrow.live{ display:none }
+  .sheet .h-mob{ display:none }
+  .sheet .strip{ margin-top:8px; padding:8px 10px }
+  .sheet .bay{ height:58px; width:42px }
+  .sheet .bay .car{ height:34px; width:16px }
+  .sheet .bay.free i{ font-size:17px }
+  .sheet .spotrow{ margin-top:8px; padding:7px 10px }
+  .sheet .spotrow .sn{ height:38px; font-size:19px }
+  .sheet .markfor{ margin-top:8px; font-size:12.5px }
+  .sheet .bigbtn{ min-height:52px; font-size:17px }
+  .sheet .dock .btns{ margin-top:6px; gap:8px }
+  .sheet .bline{ margin-top:8px; padding:7px 12px }
+  .sheet .moreb{ min-height:32px; margin-top:0 }
+  .sheet .stamp{ margin-top:8px; padding:8px 12px; font-size:13px }
+  .sheet.min .dock > :not(.rowi):not(.stat):not(.tagrow), .sheet.min .moreb, .sheet.min #morewrap{ display:none }
+  .sheet.min .tagrow{ display:block }
+}

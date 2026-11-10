@@ -72,11 +72,11 @@
 Код: `static/js/api/owner.js` (запросы) и `static/js/features/owner/owner.js` (интерфейс).
 Состояние владельца:
 ```json
-{"is_owner": true, "status": "pending", "parking": "gA", "addr": "", "place": "128",
+{"is_owner": true, "status": "pending", "parking": "s2", "addr": "", "place": "128",
  "reject_reason": "", "submitted_at": "23.10 13:20",
  "documents": [{"id": 5, "kind": "title", "name": "dogovor.pdf", "size": 14231}]}
 ```
-`status`: `none` (не владелец), `draft` (указано, документов не хватает), `pending` (на проверке), `verified`, `rejected`. `parking`: `gA`, `gB` или `other` (тогда заполнен `addr`). `kind` документа: `title` (документ на место: свидетельство о госрегистрации, договор или выписка), `tp` (технический паспорт), `other`.
+`status`: `none` (не владелец), `draft` (указано, документов не хватает), `pending` (на проверке), `verified`, `rejected`. `parking`: id улицы (`s1`…`s5`: ул. Пилотная, Небесная, Авиационная, Леонардо да Винчи, Михаила Миля; список лежит в `static/js/data/mesto-streets.js`) или `other` (тогда заполнен `addr`). `kind` документа: `title` (документ на место: свидетельство о госрегистрации, договор или выписка), `tp` (технический паспорт), `other`.
 
 - **GET / PUT `/api/me/owner/`** `{"is_owner", "parking", "addr", "place"}`: сохранить поля. Выключили галочку: статус `none`.
 - **POST `/api/me/owner/documents/`** (`multipart`: `kind`, `file`): до 10 МБ, pdf/jpg/png/heic/webp, проверять тип по содержимому, а не только по имени. Ответ 201 `{"id", "kind", "name", "size"}`. Документ `title` и `tp` заменяет предыдущий. После загрузки статус из `pending/verified/rejected` возвращается в `draft`.
@@ -88,15 +88,15 @@
 ## Аренда (флаг `listings`)
 **GET `/api/listings/`**: все объявления, у своих `"mine": true`.
 ```json
-{"id": "501", "title": "Крытое место", "zone": "gA", "owner": "Алексей", "rating": "4,9", "reviews": 12,
+{"id": "501", "title": "Крытое место", "zone": "z12", "owner": "Алексей", "rating": "4,9", "reviews": 12,
  "hour_price": 3, "day_price": 15, "month_price": 180, "free": false, "when_text": "сб–вс, весь день",
  "avail": ["weekend", "tomorrow"], "walk": 3, "covered": true, "ev": false, "mine": false, "verified": true}
 ```
-`avail`: `today`, `tomorrow`, `weekend`. Цены в рублях, копейки через точку. `null`, если формат не сдаётся. Номер места в ответе не отдаём (виден только после подтверждения брони).
+`avail`: `today`, `tomorrow`, `weekend`. Цены в рублях, копейки через точку. `null`, если формат не сдаётся. Номер места (`spot`) и улицу (`street`) отдаём всегда: гость видит их в объявлении, при бронировании и после подтверждения.
 
 **POST `/api/listings/`**:
 ```json
-{"zone": "gA", "date_from": "2026-11-01", "date_to": "2026-11-03", "all_day": true, "time_from": null, "time_to": null,
+{"zone": "z12", "date_from": "2026-11-01", "date_to": "2026-11-03", "all_day": true, "time_from": null, "time_to": null,
  "free": false, "hour_price": 3.5, "day_price": null, "month_price": null, "ev": false, "place_no": "128", "when_text": "1–3 нояб., весь день"}
 ```
 Ответ 201 с объявлением. Нужны вход, паспортные данные и статус владельца (см. выше), иначе 401 или 403.

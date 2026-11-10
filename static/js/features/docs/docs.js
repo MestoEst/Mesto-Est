@@ -7,9 +7,42 @@ var DOCS = {
   privacy:['Политика данных', ['Какие данные: имя, фамилия, телефон, идентификационный номер, геопозиция в момент отметки.', 'Зачем: заключение договора, защита от мошенничества, расчёт свободных мест.', 'Кому видны: другой стороне сделки только имя. Идентификационный номер никому не показывается.', 'Хранение: в зашифрованном виде, в соответствии с требованиями закона о защите персональных данных.']],
   contract:['Шаблон договора', ['Стороны: владелец места и пользователь, данные подставляются из аккаунтов.', 'Предмет: машино-место, адрес и номер, срок, цена и порядок расчётов.', 'Права и обязанности: один автомобиль, соблюдение правил паркинга, освобождение места в срок.', 'Ответственность: каждая сторона отвечает за причинённый вред. Фото состояния места при въезде и выезде.']]
 };
+var docBack = null;      /* если документ открыли из окна брони, «Закрыть» возвращает в это окно */
 function docHtml(k){
   var d = DOCS[k];
-  return '<div class="l-title" style="font-size:22px;margin-bottom:12px">'+d[0]+'</div><div class="doc">'+d[1].map(function(p){ return '<p>'+p+'</p>'; }).join('')+'</div><button type="button" class="cta" style="margin-top:12px"'+A('close')+'>Закрыть</button>';
+  return '<div class="l-title" style="font-size:22px;margin-bottom:12px">'+d[0]+'</div><div class="doc">'+d[1].map(function(p){ return '<p>'+p+'</p>'; }).join('')+'</div>' +
+    '<button type="button" class="cta" style="margin-top:12px"'+A('docclose')+'>'+(docBack ? 'Назад к брони' : 'Закрыть')+'</button>';
 }
 
-act('doc', function(v){ openModal(docHtml(v)); });
+act('doc', function(v){
+  var inBooking = !$('#modal').hidden && !!$('#msheet').querySelector('[data-a="send"]');
+  if(inBooking && typeof bookingHtml === 'function') docBack = function(){ openModal(bookingHtml()); };
+  else if($('#modal').hidden) docBack = null;
+  openModal(docHtml(v));
+});
+act('docclose', function(){ var b = docBack; docBack = null; if(b) b(); else closeModal(); });
+
+/* ---------- галочки на документы ----------
+   consentHtml('форма', ['terms','offer']) рисует отдельную галочку на каждый документ со ссылкой «прочитать».
+   consentCheck('форма', [...]) возвращает текст подсказки, если что-то не отмечено, иначе пустую строку. */
+var CONS = {terms:'пользовательское соглашение', offer:'оферту сервиса', privacy:'политику данных', contract:'шаблон договора'};
+state.cons = {};          /* что отметил человек: {форма: {документ: true}} */
+state.accepted = {};      /* когда человек принял документ хотя бы раз: {документ: «3 нояб., 14:05»} */
+function consentHtml(form, kinds){
+  return '<div class="cons" role="group" aria-label="Согласие с документами">' + kinds.map(function(k){
+    var on = !!(state.cons[form] && state.cons[form][k]);
+    return '<label class="opt cons-row"><input type="checkbox" class="ck" data-cons="'+form+'" data-ck="'+k+'"'+(on ? ' checked' : '')+'><span>Принимаю <button type="button" class="linkbtn"'+A('doc', k)+'>'+CONS[k]+'</button></span></label>';
+  }).join('') + '</div>';
+}
+function consentCheck(form, kinds){
+  var c = state.cons[form] || {}, miss = kinds.filter(function(k){ return !c[k]; });
+  return miss.length ? 'Отметьте галочками: ' + miss.map(function(k){ return CONS[k]; }).join(', ') : '';
+}
+function consentReset(form){ state.cons[form] = {}; }
+document.addEventListener('change', function(e){
+  var t = e.target, f = t.getAttribute && t.getAttribute('data-cons');
+  if(!f) return;
+  var k = t.getAttribute('data-ck');
+  (state.cons[f] = state.cons[f] || {})[k] = t.checked;
+  if(t.checked && !state.accepted[k]) state.accepted[k] = stamp();
+});
