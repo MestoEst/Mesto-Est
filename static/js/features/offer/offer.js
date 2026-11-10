@@ -2,7 +2,7 @@
    Блок «Я владелец места» подключается из features/owner/owner.js (через ownCall). */
 
 /* формат аренды выбирается один: бесплатно, почасово, посуточно или помесячно */
-var LIMITS = {hour:[1, 25]};      /* лимит цены, руб.: час от 1 до 25. Диапазон задаёт платформа */
+var LIMITS = {hour:[1, 25]};      /* лимит цены, белорусских руб. (BYN): час от 1 до 25. Диапазон задаёт платформа */
 var PUB_DOCS = ['terms', 'offer', 'privacy'];
 var offer = (function(){ var z = zone(defSel()); return {street:z.street, zone:z.id, spot:1, from:null, to:null, cm:{y:today0.getFullYear(), m:today0.getMonth()}, allDay:true, t1:'09:00', t2:'18:00', fmt:'hour', hp:'3', dp:'15', mp:'180', ev:false, own:false}; })();
 function rangeText(){

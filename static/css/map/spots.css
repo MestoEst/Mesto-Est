@@ -28,7 +28,7 @@
 .bay.busy i{ bottom:5px; font-size:12.5px; color:var(--ink2) }
 .bay .car{ position:absolute; left:50%; top:5px; width:19px; height:40px; transform:translateX(-50%); filter:drop-shadow(0 1px 1px rgba(14,16,13,.35)) }
 .bay.sel{ box-shadow:0 0 0 2.5px var(--ink) }
-.bay u{ position:absolute; top:-5px; right:-5px; width:19px; height:19px; border-radius:50%; background:var(--ink); color:var(--lime); font:700 11px/19px 'Onest',system-ui,sans-serif; text-decoration:none; text-align:center }
+.bay u{ position:absolute; top:-5px; right:-5px; width:19px; height:19px; border-radius:50%; background:var(--ink); color:var(--lime); font:700 9px/19px 'Onest',system-ui,sans-serif; letter-spacing:-.2px; text-decoration:none; text-align:center }
 .bay:focus-visible{ outline:2.5px solid var(--ink); outline-offset:2px }
 .spotrow{ display:flex; align-items:center; gap:12px; margin-top:10px; background:var(--surface); border-radius:18px; padding:10px 12px }
 .spotrow .sn{ min-width:58px; height:44px; padding:0 10px; border-radius:14px; background:var(--lime); color:#0E100D; font-weight:700; font-size:21px; letter-spacing:-.03em; display:grid; place-items:center }
