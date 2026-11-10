@@ -3,3 +3,7 @@
 .leaflet-top.leaflet-right { margin-top: 56px; }
 .leaflet-control-attribution { font-size: 10px; background: rgba(255,255,255,.75); }
 :root[data-theme="dark"] .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.85) contrast(.9); }
+/* приглушённая подложка: земля совпадает по цвету с фоном страницы, красный пунктир дорожек OSM не виден */
+.tiles-soft { filter: grayscale(1) contrast(.5) brightness(1.32) sepia(.1); }
+:root[data-theme="dark"] .tiles-soft { filter: grayscale(1) invert(1) contrast(.5) brightness(.5) sepia(.1); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .tiles-soft { filter: grayscale(1) invert(1) contrast(.5) brightness(.5) sepia(.1); } }
