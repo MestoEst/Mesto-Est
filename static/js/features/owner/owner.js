@@ -17,7 +17,7 @@ var OWN = (function(){
     rejected:['Отклонено', 'declined']
   };
   var draft = fresh(), seq = 1;
-  function fresh(){ return {on:false, parking:'gA', addr:'', place:'', docs:[], status:'none', sentAt:'', reason:''}; }
+  function fresh(){ return {on:false, parking:(typeof STREETS !== 'undefined' && STREETS[0] ? STREETS[0].id : 'other'), addr:'', place:'', docs:[], status:'none', sentAt:'', reason:''}; }
   function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
   function get(){ if(state.user){ if(!state.user.owner) state.user.owner = fresh(); return state.user.owner; } return draft; }
   function has(o, k){ return o.docs.some(function(d){ return d.kind === k; }); }
@@ -51,14 +51,14 @@ var OWN = (function(){
       (o.status === 'pending' ? '<span class="muted sm">отправлено: '+esc(o.sentAt)+'. Проверяем, обычно до двух рабочих дней.</span>' : '') +
       (o.status === 'verified' ? '<span class="muted sm">можно публиковать места</span>' : '') +
       (o.status === 'rejected' ? '<span class="muted sm">'+esc(o.reason || 'Документы не подошли.')+' Исправьте и отправьте снова.</span>' : '') + '</div>';
-    h += '<div class="two ownloc"><div><label class="sm muted" for="own-pk">Где место</label><select id="own-pk" data-own="parking"'+dis+'><option value="gA"'+(o.parking==='gA'?' selected':'')+'>Паркинг A</option><option value="gB"'+(o.parking==='gB'?' selected':'')+'>Паркинг B</option><option value="other"'+(o.parking==='other'?' selected':'')+'>Двор или улица</option></select></div>' +
+    h += '<div class="two ownloc"><div><label class="sm muted" for="own-pk">Улица</label><select id="own-pk" data-own="parking"'+dis+'>'+(typeof STREETS !== 'undefined' ? STREETS : []).map(function(st){ return '<option value="'+st.id+'"'+(o.parking===st.id?' selected':'')+'>'+esc(st.name)+'</option>'; }).join('')+'<option value="other"'+(o.parking==='other'?' selected':'')+'>Другой адрес</option></select></div>' +
       '<div><label class="sm muted" for="own-pl">Номер места</label><input id="own-pl" type="text" inputmode="text" data-own="place" placeholder="например, 128" value="'+esc(o.place)+'" autocomplete="off"'+dis+'></div></div>' + (lock ? '<button type="button" class="linkbtn" style="margin-top:8px" data-oa="edit">Изменить данные</button>' : '');
     if(o.parking === 'other') h += '<div style="margin-top:8px"><label class="sm muted" for="own-ad">Адрес</label><input id="own-ad" type="text" data-own="addr" placeholder="улица, дом" value="'+esc(o.addr)+'" autocomplete="off"'+dis+'></div>';
     h += '<div class="slots">' + DOC_KINDS.map(function(d){ return slot(o, d); }).join('') + '</div>' +
       '<p class="hint" style="margin-top:8px">Фото или PDF, до '+MAX_MB+' МБ. Документы видим только мы, другим пользователям они не показываются.</p>';
     if(ctx === 'account'){
       if(o.status === 'draft' || o.status === 'rejected' || o.status === 'none')
-        h += '<button type="button" class="cta" style="margin-top:12px" data-oa="submit">Отправить на проверку</button>' + (complete(o) ? '' : '<p class="hint">Нужно: номер места, документ на место и технический паспорт.</p>');
+        h += '<div style="margin-top:12px">'+consentHtml('owner', ['privacy'])+'</div><button type="button" class="cta" style="margin-top:4px" data-oa="submit">Отправить на проверку</button>' + (complete(o) ? '' : '<p class="hint">Нужно: номер места, документ на место и технический паспорт.</p>');
       if(o.status === 'pending' && /[?&]demo\b/.test(location.search))
         h += '<div class="demobox"><span class="muted sm">Демо: админки пока нет, исход проверки можно сыграть самой.</span><div class="two"><button type="button" class="chip" data-oa="ok">Подтвердить</button><button type="button" class="chip" data-oa="no">Отклонить</button></div></div>';
     } else if(complete(o)) h += '<p class="hint">Документы уйдут на проверку сразу после создания аккаунта.</p>';
@@ -101,7 +101,8 @@ var OWN = (function(){
     else if(a === 'rm'){ var gone = o.docs.filter(function(d){ return d.id === v; })[0]; o.docs = o.docs.filter(function(d){ return d.id !== v; }); touch(o); emit('owner-doc-remove', {id:v, doc:gone, owner:o}); redraw(); }
     else if(a === 'submit'){
       if(!complete(o)){ toast(!String(o.place).trim() ? 'Укажите номер места' : (o.parking === 'other' && !String(o.addr).trim() ? 'Укажите адрес' : 'Приложите документ на место и технический паспорт')); return; }
-      o.status = 'pending'; o.sentAt = stamp(); o.reason = ''; emit('owner-submit', {owner:o}); redraw(); toast('Отправили на проверку');
+      var ce = consentCheck('owner', ['privacy']); if(ce){ toast(ce); return; }
+      o.status = 'pending'; o.sentAt = stamp(); o.reason = ''; emit('owner-submit', {owner:o}); consentReset('owner'); redraw(); toast('Отправили на проверку');
     }
     else if(a === 'ok'){ o.status = 'verified'; emit('owner-demo', {status:'verified'}); render(); toast('Подтверждено. Можно сдавать место'); }
     else if(a === 'no'){ o.status = 'rejected'; o.reason = 'Не виден номер места на документе.'; emit('owner-demo', {status:'rejected'}); render(); }

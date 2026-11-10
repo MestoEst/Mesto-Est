@@ -31,4 +31,4 @@ function lvlText(z){ var l = level(z); return l==='hi' ? 'Места есть' :
 function perim(){ return DISTRICT.zones.filter(function(z){ return z.type === 'perimeter'; }); }
 function allListings(){ return state.mine.concat(DISTRICT.listings); }
 function listing(id){ return allListings().filter(function(l){ return l.id === id; })[0]; }
-function parkName(l){ var z = zone(l.zone); return z ? z.name : 'Парковка'; }
+function parkName(l){ var z = zone(l.zone); return z ? (z.label || z.name) : 'Парковка'; }
