@@ -3,10 +3,12 @@
   var ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
   var NATIVE_ZOOM = 19, MAX_ZOOM = 21;
   var BASEMAPS = {
-    light: { url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', sub: 'abcd', native: 20,
-             attr: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>' },
-    osm:   { url: TILES, sub: 'abc', native: NATIVE_ZOOM, attr: ATTR }
+    soft: { url: TILES, native: NATIVE_ZOOM, attr: ATTR, cls: 'tiles-soft' },   /* OpenStreetMap, приглушённая под цвета страницы (фильтр в mesto-map.css) */
+    osm:  { url: TILES, native: NATIVE_ZOOM, attr: ATTR, cls: '' }              /* обычная OpenStreetMap */
   };
+  /* по умолчанию ровный бежевый фон без карты, как в ролике: на нём видны только асфальтовые капсулы, места и машинки.
+     Настоящую карту можно вернуть в MESTO_CONFIG.basemap: 'soft' (приглушённая OpenStreetMap) или 'osm' (обычная) */
+  function defaultBasemap() { return 'flat'; }
 
   var holder = null, map = null, markLayer = null, youMarker = null, items = [];
 
@@ -33,13 +35,12 @@
 
   function init() {
     map = L.map(holder, { zoomControl: false, preferCanvas: true, zoomSnap: 0.5, minZoom: 15, maxZoom: MAX_ZOOM });
-    /* подложка: MESTO_CONFIG.basemap = 'light' (по умолчанию, светлая карта CARTO Positron: улицы и дома без шума, в тон страницы),
-       'osm' (обычная OpenStreetMap) или 'flat' (ровный бежевый фон без карты, как в ролике) */
-    var bm = BASEMAPS[(window.MESTO_CONFIG && window.MESTO_CONFIG.basemap) || 'light'];
+    /* подложка: MESTO_CONFIG.basemap = 'flat' (по умолчанию: ровный бежевый фон, как в ролике), 'soft' (приглушённая OpenStreetMap) или 'osm' (обычная) */
+    var bm = BASEMAPS[(window.MESTO_CONFIG && window.MESTO_CONFIG.basemap) || defaultBasemap()];
     if (bm) { map.attributionControl.setPrefix(false); map.attributionControl.setPosition('topright'); }
     else map.removeControl(map.attributionControl);
     fitAll(false);   /* первый вид нужен ДО слоёв: с preferCanvas слои мест иначе падают (renderer ещё не готов) и вместо карты остаётся заглушка */
-    if (bm) L.tileLayer(bm.url, { subdomains: bm.sub, maxNativeZoom: bm.native, maxZoom: MAX_ZOOM, attribution: bm.attr }).addTo(map);
+    if (bm) L.tileLayer(bm.url, { maxNativeZoom: bm.native, maxZoom: MAX_ZOOM, attribution: bm.attr, className: bm.cls }).addTo(map);
 
     spots(function (S) { S.attach(map); });           /* асфальт под зонами: слой идёт раньше мест */
 
