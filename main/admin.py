@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import ParkingSpot, SpotObservation, SpotHourStat
+from .models import ParkingSpot, SpotObservation, SpotHourStat, UserProfile
 
 
 @admin.register(ParkingSpot)
@@ -19,3 +19,8 @@ class SpotObservationAdmin(admin.ModelAdmin):
 class SpotHourStatAdmin(admin.ModelAdmin):
     list_display = ("spot", "weekday", "hour", "total", "free")
     list_filter = ("weekday", "hour")
+
+@admin.register(UserProfile)
+class UserProfileAdmin(admin.ModelAdmin):
+    list_display = ("user", "patronymic", "phone")
+    search_fields = ("user__email", "phone")
