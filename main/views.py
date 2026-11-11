@@ -8,6 +8,9 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 from django.template.loader import render_to_string
+from django.contrib.auth import get_user_model, authenticate
+from django.contrib.auth import login as auth_login
+from django.contrib.auth import logout as auth_logout
 
 from .models import ParkingSpot, SpotObservation, SpotHourStat
 
