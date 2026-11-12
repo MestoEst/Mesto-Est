@@ -20,6 +20,17 @@ act('doc', function(v){
   else if($('#modal').hidden) docBack = null;
   openModal(docHtml(v));
 });
+/* отдельная страница документа: /docs/terms, /docs/offer, /docs/privacy, /docs/contract */
+VIEWS.docs = function(){
+  var d = DOCS[state.doc];
+  if(!d) return '<h1 class="h1">Документ не найден</h1>';
+  return '<h1 class="h1">'+d[0]+'</h1><section class="card"><div class="doc">'+d[1].map(function(p){ return '<p>'+p+'</p>'; }).join('')+'</div></section>' +
+    '<button type="button" class="cta"'+A('docback')+'>Назад</button>';
+};
+act('docback', function(){
+  if(ROUTER.navigated) history.back();
+  else { state.tab = 'account'; render(true); }
+});
 act('docclose', function(){ var b = docBack; docBack = null; if(b) b(); else closeModal(); });
 
 /* ---------- галочки на документы ----------

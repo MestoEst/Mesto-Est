@@ -5,7 +5,7 @@ from django.db.models import F, Sum
 from django.http import JsonResponse, HttpResponseNotFound
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST
 from django.template.loader import render_to_string
 from django.contrib.auth import get_user_model, authenticate
@@ -113,6 +113,13 @@ def register(request):
 
 def index(request):
     return render(request, 'layout.html')
+
+
+@ensure_csrf_cookie
+def app_page(request, **kwargs):
+    """Любая страница сайта (/map, /rent, /offer, /account, /login, /register, /docs/...).
+    Отдаёт приложение, нужный раздел открывает JS по адресу. Кука csrftoken нужна для POST-запросов API."""
+    return render(request, 'mesto_prototype.html')
 
 
 
