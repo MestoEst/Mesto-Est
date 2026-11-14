@@ -4,7 +4,16 @@
 /* формат аренды выбирается один: бесплатно, почасово, посуточно или помесячно */
 var LIMITS = {hour:[1, 25]};      /* лимит цены, белорусских руб. (BYN): час от 1 до 25. Диапазон задаёт платформа */
 var PUB_DOCS = ['terms', 'offer', 'privacy'];
-var offer = (function(){ var z = zone(defSel()); return {street:z.street, zone:z.id, spot:1, from:null, to:null, cm:{y:today0.getFullYear(), m:today0.getMonth()}, allDay:true, t1:'09:00', t2:'18:00', fmt:'hour', hp:'3', dp:'15', mp:'180', ev:false, own:false}; })();
+var offer = (function(){ var z = zone(defSel()) || {street:'',id:''}; return {street:z.street, zone:z.id, spotId:null, spot:1, from:null, to:null, cm:{y:today0.getFullYear(), m:today0.getMonth()}, allDay:true, t1:'09:00', t2:'18:00', fmt:'hour', hp:'3', dp:'15', mp:'180', ev:false, own:false}; })();
+function selectOfferBay(z,id){
+  if(!z || !z.bays.length)return;
+  var b=z.bays.find(function(b){return b.id===id;})||z.bays[0];
+  offer.zone=z.id;offer.street=z.street;offer.spotId=b.id;offer.spot=b.num;
+}
+function syncOfferBay(){
+  var found=false;ZS.forEach(function(z){if(z.bays.some(function(b){return b.id===offer.spotId;})){selectOfferBay(z,offer.spotId);found=true;}});
+  if(!found)selectOfferBay(zone(offer.zone)||ZS[0],null);
+}
 function rangeText(){
   var o = offer;
   if(!o.from) return '';
@@ -39,7 +48,8 @@ function priceField(key, label, id, hint){
     (hint ? '<div class="limit'+(err ? ' bad' : '')+'" id="'+id+'-h" data-hint="'+esc(hint)+'">'+esc(err || hint)+'</div>' : '') + '</div>';
 }
 function previewListing(){
-  var o = offer, z = zone(o.zone), l = {id:'prev', title:o.ev ? 'Место с зарядкой' : 'Место во дворе', zone:o.zone, bay:o.spot - 1, num:o.spot, street:o.street, owner:state.user ? state.user.name : 'Вы', rating:'', whenText:rangeText() || 'выберите даты', avail:[], walk:3, cov:false, ev:o.ev, mine:true}, v;
+  if(SPOT_DATA.status!=='ready')return null;syncOfferBay();
+  var o = offer, z = zone(o.zone), l = {id:'prev', title:o.ev ? 'Место с зарядкой' : 'Место во дворе', zone:o.zone, spotId:o.spotId, bay:z ? z.bays.findIndex(function(b){return b.id===o.spotId;}) : -1, num:o.spot, street:o.street, owner:state.user ? state.user.name : 'Вы', rating:'', whenText:rangeText() || 'выберите даты', avail:[], walk:3, cov:false, ev:o.ev, mine:true}, v;
   if(!z) return null;
   if(o.fmt === 'free') l.free = true;
   else { v = parseP(o[{hour:'hp', day:'dp', month:'mp'}[o.fmt]]); if(isNaN(v)) return null; l[o.fmt] = v; }
@@ -50,11 +60,12 @@ function whereHtml(){
   var o = offer, st = street(o.street), z = zone(o.zone);
   var h = '<div class="two"><div><label class="sm muted" for="of-st">Улица</label><select id="of-st">' + STREETS.map(function(s){ return '<option value="'+s.id+'"'+(s.id === o.street ? ' selected' : '')+'>'+esc(s.name)+'</option>'; }).join('') + '</select></div>' +
     '<div><label class="sm muted" for="of-zn">Зона</label><select id="of-zn">' + st.zones.map(function(id){ var q = zone(id); return '<option value="'+id+'"'+(id === o.zone ? ' selected' : '')+'>'+esc(q.name)+' · '+q.spots+' '+plural(q.spots, 'место', 'места', 'мест')+'</option>'; }).join('') + '</select></div></div>' +
-    '<div class="sm muted" style="margin:12px 0 6px">Номер места: нажмите на своё</div>' + SPOTS.strip(z, {act:'opick', sel:o.spot - 1, id:'ostrip', rent:false}) +
+    '<div class="sm muted" style="margin:12px 0 6px">Номер места: нажмите на своё</div>' + SPOTS.strip(z, {act:'opick', sel:o.spotId, id:'ostrip', rent:false}) +
     '<div class="spotrow"><div class="sn">№'+o.spot+'</div><div class="sb"><b>Ваше место</b><span>'+esc(z.label)+'</span></div></div>';
   return h;
 }
 function offerView(){
+  if(SPOT_DATA.status!=='ready')return '<section class="card">Дождитесь загрузки мест на вкладке «Карта».</section>';syncOfferBay();
   var o = offer, fmt = function(k, name){ return '<button type="button" class="chip"'+A('fmt',k)+' aria-pressed="'+(o.fmt === k)+'">'+name+'</button>'; };
   var pf = o.fmt === 'hour' ? priceField('hp', 'Цена за час', 'of-hp', 'От '+LIMITS.hour[0]+' до '+LIMITS.hour[1]+' руб. в час. Диапазон задаёт платформа, чтобы цены оставались честными.')
     : o.fmt === 'day' ? priceField('dp', 'Цена за сутки', 'of-dp') : o.fmt === 'month' ? priceField('mp', 'Цена за месяц', 'of-mp') : '<p class="muted sm">Место отдаёте бесплатно, например соседям.</p>';
@@ -79,7 +90,7 @@ function syncText(){}
 VIEWS.offer = offerView;
 
 act('fmt', function(v){ offer.fmt = v; render(); });
-act('opick', function(v){ offer.spot = Number(v) + 1; render(); });
+act('opick', function(v){selectOfferBay(zone(offer.zone),v);render();});
 act('cal', function(v){
   syncText(); offer.cm.m += Number(v);
   if(offer.cm.m > 11){ offer.cm.m = 0; offer.cm.y++; }
@@ -101,18 +112,18 @@ act('publish', function(){
   if(!offer.from){ toast('Выберите даты, когда место свободно'); return; }
   var pe = priceErr(); if(pe){ toast(pe); return; }
   if(!pv){ toast('Введите цену'); return; }
-  if(allListings().some(function(l){ return l.zone === offer.zone && l.bay === offer.spot - 1; })){ toast('Это место уже сдаётся. Выберите другое'); return; }
+  if(allListings().some(function(l){ return l.spotId === offer.spotId; })){ toast('Это место уже сдаётся. Выберите другое'); return; }
   var ce = consentCheck('publish', PUB_DOCS); if(ce){ toast(ce); return; }
-  var l = {id:'m'+(state.nextId++), mine:true, title:pv.title, zone:offer.zone, bay:offer.spot - 1, num:offer.spot, street:offer.street, owner:state.user.name, rating:'', whenText:rangeText(), avail:[], walk:3, cov:false, ev:offer.ev};
+  var l = {id:'m'+(state.nextId++), mine:true, title:pv.title, zone:offer.zone, spotId:offer.spotId, bay:pv.bay, num:offer.spot, street:offer.street, owner:state.user.name, rating:'', whenText:rangeText(), avail:[], walk:3, cov:false, ev:offer.ev};
   ['free', 'hour', 'day', 'month'].forEach(function(k){ if(pv[k]) l[k] = pv[k]; });
   state.mine.unshift(l);
-  emit('publish', {listing:l, offer:{zone:offer.zone, street:offer.street, spot:offer.spot, from:offer.from, to:offer.to, allDay:offer.allDay, t1:offer.t1, t2:offer.t2, free:offer.fmt === 'free', hour:offer.fmt === 'hour', day:offer.fmt === 'day', month:offer.fmt === 'month', hp:offer.hp, dp:offer.dp, mp:offer.mp, ev:offer.ev, num:String(offer.spot)}});
+  emit('publish', {listing:l, offer:{spotId:offer.spotId, zone:offer.zone, street:offer.street, spot:offer.spot, from:offer.from, to:offer.to, allDay:offer.allDay, t1:offer.t1, t2:offer.t2, free:offer.fmt === 'free', hour:offer.fmt === 'hour', day:offer.fmt === 'day', month:offer.fmt === 'month', hp:offer.hp, dp:offer.dp, mp:offer.mp, ev:offer.ev, num:String(offer.spot)}});
   consentReset('publish'); offer.own = false; offer.from = null; offer.to = null;
   state.tab = 'rent'; render(true); toast('Место опубликовано');
 });
 
-onChange('of-st', function(el){ var st = street(el.value); if(!st) return; offer.street = st.id; offer.zone = st.zones[0]; offer.spot = 1; render(); });
-onChange('of-zn', function(el){ if(!zone(el.value)) return; offer.zone = el.value; offer.spot = 1; render(); });
+onChange('of-st', function(el){ var st = street(el.value); if(!st) return; offer.street = st.id; selectOfferBay(zone(st.zones[0]),null); render(); });
+onChange('of-zn', function(el){ if(!zone(el.value)) return; selectOfferBay(zone(el.value),null); render(); });
 onChange('of-ev', function(el){ offer.ev = el.checked; render(); });
 onChange('of-all', function(el){ offer.allDay = el.checked; render(); });
 onChange('of-own', function(el){ offer.own = el.checked; });

@@ -3,6 +3,7 @@
    он даёт MAP.attach, MAP.draw, MAP.focusZone, MAP.onLayer. Без неё вместо карты будет заглушка. */
 
 function mapAttachOrPlaceholder(){
+if(SPOT_DATA.status!=='ready') return;
 if(MAP.attach){ try { MAP.attach(); return; } catch(err){ if(window.console) console.warn('[map]', err); } }   /* карта не загрузилась: показываем заглушку, остальное работает */
 var slot = $('#mapslot');
 if(slot) slot.innerHTML = '<div class="mapph"><div><b>Здесь будет карта района</b><span>Карту подключаем отдельным файлом. Остальное работает</span></div></div>';
@@ -11,13 +12,14 @@ if(slot) slot.innerHTML = '<div class="mapph"><div><b>Здесь будет ка
 function mapPart(){ return '<div id="legendwrap">' + legend() + '</div>'; }
 function legend(){
   if(state.layer !== 'places') return '';
-  return '<div class="legend"><span><i style="background:#C9F54E"></i>Свободно</span><span><i class="lg-car"></i>Занято, на месте машина</span><span>≈ число свободных это оценка по зоне</span><span>Номер места и машинки видны при приближении</span></div>';
+  return '<div class="legend"><span><i style="background:#C9F54E"></i>Свободно</span><span><i class="lg-car"></i>Занято, на месте машина</span><span>Серый — статус неизвестен</span><span>Номер места и машинки видны при приближении</span></div>';
 }
 
 var DEMO = true;   /* демо: отмечать можно без GPS. В боевой версии поставить false */
 function canMark(z){ return z.type === 'perimeter' && (DEMO || !!state.gps); }
 function whenLabel(t){ return (t.day === 'wd' ? 'будни' : 'выходные') + ', ' + hh(t.hour); }
 function dock(){
+  if(SPOT_DATA.status!=='ready') return '';
   if(state.edit && MAP.editHtml) return MAP.editHtml();
   var L = state.layer, z = zone(state.sel), live = !state.mapFc, n = realNow();
   var tag = live ? '<span class="nowtag">Сейчас · '+n.dow+', '+n.time+'</span>' : '<button type="button" class="fctag"'+A('gonow')+'>Прогноз: '+whenLabel(state.fc)+' · вернуться к «сейчас»</button>';
@@ -38,14 +40,14 @@ function dock(){
       '</ul></section>';
   }
   var last = state.marks.filter(function(m){ return m.zone === z.id; }).slice(-1)[0];
-  var can = live && canMark(z), st = street(z.street), k = state.spot;
-  var h = '<section class="dock"><div class="rowi"><span class="ico">'+ic('pin')+'</span><div class="rt"><small>'+esc(st ? st.name : 'Район')+'</small><b>'+esc(z.name)+'</b></div><span class="pill">шанс '+pct(z)+'%</span></div>' +
-    '<div class="stat"><div class="big">≈'+freeEst(z)+'</div><div class="bt"><b>из '+z.spots+' мест свободно</b><span>'+lvlText(z)+'</span></div></div><div class="tagrow'+(live ? ' live' : '')+'" style="margin:2px 2px 0">'+tag+'</div>' +
+  var can = live && canMark(z), st = street(z.street), k = z.bays.findIndex(function(b){return b.id===state.spot;}); if(k<0) k=null;
+  var h = '<section class="dock"><div class="rowi"><span class="ico">'+ic('pin')+'</span><div class="rt"><small>'+esc(st ? st.name : 'Район')+'</small><b>'+esc(z.name)+'</b></div><span class="pill">Свободно: '+pct(z)+'%</span></div>' +
+    '<div class="stat"><div class="big">'+freeEst(z)+'</div><div class="bt"><b>из '+z.spots+' мест свободно</b><span>'+lvlText(z)+'</span></div></div><div class="tagrow'+(live ? ' live' : '')+'" style="margin:2px 2px 0">'+tag+'</div>' +
     SPOTS.strip(z) + SPOTS.spotRow(z);
   if(can){
-    h += '<div class="markfor">Отметить: <b>'+(k != null ? 'место №'+(k + 1) : 'всю зону')+'</b></div>' +
-      '<div class="btns"><button type="button" class="bigbtn free"'+A('mark','free')+'>'+ic('check',22)+'Свободно</button><button type="button" class="bigbtn busy"'+A('mark','busy')+'>'+ic('x',22)+'Занято</button></div>';
-    if(state.last && state.last.zone === z.id) h += '<div class="stamp"><span>Ваша отметка: <b>'+(state.last.spot ? 'место №'+state.last.spot+', ' : '')+(state.last.kind==='free'?'свободно':'занято')+'</b> в '+state.last.time+'</span><button type="button"'+A('undo')+'>Отменить</button></div>';
+    h += '<div class="markfor">Отметить: <b>'+(k != null ? 'место №'+z.bays[k].num : 'всю зону')+'</b></div>' +
+      '<div class="btns"><button type="button" class="bigbtn free"'+A('mark','free')+(API.spotPending?' disabled':'')+'>'+ic('check',22)+'Свободно</button><button type="button" class="bigbtn busy"'+A('mark','busy')+(API.spotPending?' disabled':'')+'>'+ic('x',22)+'Занято</button></div>';
+    if(state.last && state.last.zone === z.id) h += '<div class="stamp"><span>Ваша отметка: <b>'+(state.last.spot ? 'место №'+state.last.spot+', ' : '')+(state.last.kind==='free'?'свободно':'занято')+'</b> в '+state.last.time+'</span>'+(state.last.sp && state.last.prevBusy===null ? '' : '<button type="button"'+A('undo')+'>Отменить</button>')+'</div>';
     else h += '<div class="dockhint h-mob" style="margin-top:8px">'+(state.gps ? 'Зона определена по GPS. Один тап, без подтверждений.' : 'Один тап, без подтверждений. Можно отметить зону целиком или конкретное место.')+'</div>';
     h += (typeof BONUS !== 'undefined' ? BONUS.line() : '');
   } else if(live){
@@ -63,27 +65,26 @@ function fcResults(){
 }
 
 function moreHtml(){
-  var t = state.fc, list = perim().slice().sort(function(a,b){ return frac(b) - frac(a); }).slice(0,6);
-  return '<div class="card"><div class="lbl" style="margin-bottom:10px">Прогноз на другое время</div><div class="timecard"><div class="seg" role="group" aria-label="Тип дня"><button type="button"'+A('fcday','wd')+' aria-pressed="'+(t.day==='wd')+'">Будни</button><button type="button"'+A('fcday','we')+' aria-pressed="'+(t.day==='we')+'">Выходные</button></div>' +
-    '<input id="hour" type="range" min="0" max="23" step="1" value="'+t.hour+'" aria-label="Время"><output id="fcout" for="hour">'+hh(t.hour)+'</output></div>' +
-    '<div id="fcres">'+fcResults()+'</div>' +
-    (state.mapFc ? '<button type="button" class="cta ghost" style="margin-top:12px;min-height:48px;font-size:15px"'+A('gonow')+'>Вернуться к «сейчас»</button>' : '<button type="button" class="cta" style="margin-top:12px;min-height:48px;font-size:15px"'+A('fcmap')+'>Показать на карте</button>') + '</div>' +
-    '<div class="card"><div class="lbl">Свободнее всего сейчас</div><ul class="zl">' +
-    list.map(function(z){ return '<li><button type="button"'+A('zlist',z.id)+'><span>'+esc(z.label)+'</span><span class="ct">≈'+freeEst(z)+' · '+pct(z)+'%</span></button></li>'; }).join('') + '</ul></div>' + mapPart();
+  var list=perim().slice().sort(function(a,b){return freeEst(b)-freeEst(a);});
+  return '<div class="card"><div class="lbl">Текущие статусы по зонам</div><p class="sm muted">Прогноз пока недоступен. Показаны подтверждённые свободные места; неизвестные учитываются отдельно.</p><ul class="zl">'+list.map(function(z){var c=SPOTS.counts(z);return '<li><button type="button"'+A('zlist',z.id)+'><span>'+esc(z.label)+'</span><span class="ct">'+c.free+' свободно · '+c.unknown+' неизвестно</span></button></li>';}).join('')+'</ul></div>'+mapPart();
 }
+function legacyLayoutNotice(){return SPOT_DATA.legacyAvailable ? '<div class="dockhint">В браузере есть старая разметка. Она не применяется к новой карте. <button type="button"'+A('export-legacy')+'>Экспортировать</button></div>' : '';}
 function mapView(){
+  if(SPOT_DATA.status!=='ready') return '<section class="card" role="status"><h1>'+ (SPOT_DATA.status==='error'?'Не удалось загрузить парковочные места':'Загружаем парковочные места…')+'</h1><p>'+esc(SPOT_DATA.error)+'</p>'+(SPOT_DATA.status==='error'?'<button type="button" class="cta"'+A('retry-spots')+'>Повторить загрузку</button>':'')+'</section>';
+
+  var legacyNotice=legacyLayoutNotice();
   var layers = [['places','Места','pin'],['streets','Улицы','park'],['access','Спецместа','wheel'],['ev','Зарядки','bolt']];
   return '<div class="stage"><div id="mapslot"></div>' +
     '<div class="topbar"><div class="chips" role="group" aria-label="Слои карты">' + (state.edit ? '<span class="chip" style="background:var(--lime);color:#0E100D;border:0">Режим разметки</span>' : layers.map(function(l){ return '<button type="button" class="chip"'+A('layer',l[0])+' aria-pressed="'+(state.layer===l[0])+'">'+ic(l[2])+l[1]+'</button>'; }).join('')) + '</div></div>' +
     (MAP.attach ? '<button type="button" class="locbtn"'+A('locate')+' aria-label="Где я">'+ic('loc',22)+'</button><button type="button" class="locbtn two"'+A('fitall')+' aria-label="Весь район">'+ic('all',22)+'</button>' : '') +
-    '<aside class="sheet'+(state.sheetMin ? ' min' : '')+'" aria-label="Панель парковок">' + (state.edit ? '' : '<button type="button" class="grab"'+A('peek')+' aria-label="'+(state.sheetMin ? 'Развернуть панель' : 'Свернуть панель')+'" aria-expanded="'+(!state.sheetMin)+'"><i></i></button>') + '<div id="dockwrap">'+dock()+'</div>' +
-    (state.edit ? '' : '<button type="button" class="moreb"'+A('more')+' aria-expanded="'+state.sheetMore+'">'+(state.sheetMore?'Скрыть':'Прогноз и список зон')+'<svg class="i" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>' +
+    '<aside class="sheet'+(state.sheetMin ? ' min' : '')+'" aria-label="Панель парковок">' + (state.edit ? '' : '<button type="button" class="grab"'+A('peek')+' aria-label="'+(state.sheetMin ? 'Развернуть панель' : 'Свернуть панель')+'" aria-expanded="'+(!state.sheetMin)+'"><i></i></button>') + '<div id="dockwrap">'+legacyNotice+dock()+'</div>' +
+    (state.edit ? '' : '<button type="button" class="moreb"'+A('more')+' aria-expanded="'+state.sheetMore+'">'+(state.sheetMore?'Скрыть':'Статусы и список зон')+'<svg class="i" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>' +
     (state.sheetMore ? '<div id="morewrap">'+moreHtml()+'</div>' : '')) + '</aside></div>';
 }
 
 function refreshMap(){
   var sc = $('#strip'), left = sc ? sc.scrollLeft : 0, d = $('#dockwrap');
-  if(d) d.innerHTML = dock();
+  if(d) d.innerHTML = legacyLayoutNotice()+dock();
   sc = $('#strip'); if(sc) sc.scrollLeft = left;
   var lg = $('#legendwrap'); if(lg) lg.innerHTML = legend();
   mapCall('draw');
@@ -96,31 +97,35 @@ act('zone', function(v){ state.sel = v; state.spot = null; render(); });
 act('zlist', function(v){ state.sel = v; state.spot = null; state.layer = 'places'; render(); mapCall('focusZone', v); });
 act('street', function(v){ var st = street(v); if(!st) return; state.sel = st.zones[0]; state.spot = null; state.layer = 'places'; render(); mapCall('focusStreet', v); });
 act('spot', function(v){
-  var k = Number(v); state.spot = state.spot === k ? null : k; refreshMap();
+  var z=zone(state.sel);if(!z || !z.bays.some(function(b){return b.id===v;}))return; state.spot = state.spot === v ? null : v; refreshMap();
   var sc = $('#strip'), t = sc && sc.querySelector('.sel'); if(t) sc.scrollLeft = t.offsetLeft - sc.clientWidth/2 + t.offsetWidth/2;
   if(state.spot != null) mapCall('focusSpot', state.sel, state.spot);
 });
 /* из объявления: показать это место на карте */
-act('onmap', function(v){ var l = listing(v); if(!l) return; state.sel = l.zone; state.spot = l.bay; state.layer = 'places'; state.tab = 'map'; render(true); mapCall('focusSpot', l.zone, l.bay); });
+act('onmap', function(v){ var l = listing(v); if(!l) return; state.sel = l.zone; state.spot = l.spotId; state.layer = 'places'; state.tab = 'map'; render(true); mapCall('focusSpot', l.zone, l.spotId); });
 act('fcday', function(v){ state.fc.day = v; render(); });
-act('fcmap', function(){ state.mapFc = true; render(true); });
+act('fcmap', function(){ toast('Прогноз пока недоступен: карта показывает текущие статусы'); });
 act('gonow', function(){ state.mapFc = false; var nn = realNow(); state.fc = {day:nn.day, hour:nn.hour}; render(true); });
 act('layer', function(v){ state.layer = v; render(); mapCall('onLayer', v); });
 act('peek', function(){ state.sheetMin = !state.sheetMin; render(); });
 act('more', function(){ state.sheetMore = !state.sheetMore; render(); });
 act('mark', function(v){
-  var nw = realNow(), z = zone(state.sel), k = state.spot, m = {zone:state.sel, kind:v, hour:nw.hour, day:nw.day, time:nw.time};
+  if(API.spotPending)return;
+  var nw = realNow(), z = zone(state.sel), k = z && z.bays.findIndex(function(b){return b.id===state.spot;}), m = {zone:state.sel, kind:v, hour:nw.hour, day:nw.day, time:nw.time};
+  if(!z || SPOT_DATA.status!=='ready')return; if(k<0)k=null;
+  if(k!=null)m.spotId=SPOTS.id(z,k);
   var award = (typeof BONUS !== 'undefined') ? BONUS.award(m, k) : null;
   if(k != null){   /* отметка конкретного места: машинка приезжает или уезжает, оценку всей зоны не двигаем */
-    m.spot = k + 1; m.spotId = SPOTS.id(z, k); m.prevBusy = !SPOTS.isFree(z, k); m.sp = true;
+    m.spot = z.bays[k].num; m.spotId = SPOTS.id(z, k); m.prevBusy = SPOTS.isFree(z, k)===null ? null : !SPOTS.isFree(z, k); m.sp = true;
     SPOTS.setBay(z, k, v === 'busy', 'user');
   } else state.marks.push(m);
   state.last = m; state.helped += 1; m.award = award ? award.pts : 0;
-  emit('mark', {mark:m, gps:state.gps, spot:k != null ? k + 1 : null});
-  toast('Отмечено в '+m.time + (award && award.pts ? '. +'+award.pts+' баллов' : '. '+({cool:'Баллы за это место уже начислены', fast:'Баллы можно получать раз в 2 минуты', cap:'На сегодня баллы за отметки закончились', far:'Баллы начисляются, когда вы рядом с зоной'}[award && award.why] || 'Увидят соседи')));
+  emit('mark', {mark:m, gps:state.gps, spotId:m.spotId || null, spot:k != null ? z.bays[k].num : null});
+  if(m.sp)toast('Сохраняем отметку…'); else toast('Отмечено в '+m.time + (award && award.pts ? '. +'+award.pts+' баллов' : '. '+({cool:'Баллы за это место уже начислены', fast:'Баллы можно получать раз в 2 минуты', cap:'На сегодня баллы за отметки закончились', far:'Баллы начисляются, когда вы рядом с зоной'}[award && award.why] || 'Увидят соседи')));
   refreshMap();
 });
 act('undo', function(){
+  if(API.spotPending)return;
   var m = state.last; emit('unmark', {mark:m});
   if(m && m.sp){ ZS.forEach(function(z){ z.bays.forEach(function(b, k){ if(b.id === m.spotId) SPOTS.setBay(z, k, m.prevBusy, 'user'); }); }); }
   var i = state.marks.indexOf(m);
@@ -133,3 +138,6 @@ act('evrent', function(){ state.fEv = true; state.zoneFilter = ''; state.tab = '
 onInput('hour', function(val){
   state.fc.hour = Number(val); $('#fcout').textContent = hh(state.fc.hour); $('#fcres').innerHTML = fcResults(); if(state.mapFc) refreshMap();
 });
+
+act('retry-spots',function(){API.loadSpots();});
+act('export-legacy',function(){try{exportLegacyLayout();}catch(e){toast(e.message);}});

@@ -70,3 +70,7 @@
   .sheet.min .dock > :not(.rowi):not(.stat):not(.tagrow), .sheet.min .moreb, .sheet.min #morewrap{ display:none }
   .sheet.min .tagrow{ display:block }
 }
+
+/* Unknown is a third state: no invented car and no "free" estimate. */
+.bay.unknown { background: #b1afa8; color: #30332c; }
+.sp-num .u { color: #5b5e56; }

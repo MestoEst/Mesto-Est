@@ -32,7 +32,7 @@ var BONUS = (function(){
 
   /* начислить за отметку. m: отметка, k: номер места или null (вся зона). Ответ: {pts} или {pts:0, why:'cool' | 'fast' | 'cap' | 'far'} */
   function award(m, k){
-    var id = m.zone + ':' + (k == null ? 'zone' : k), now = Date.now(), day = new Date(now).toDateString();
+    var id = k == null ? 'zone:'+m.zone : 'spot:'+m.spotId, now = Date.now(), day = new Date(now).toDateString();
     if(d.seen[id] && now - d.seen[id] < COOL_MIN*60000) return {pts:0, why:'cool', cool:true};
     if(d.day.date !== day) d.day = {date:day, n:0};
     if(d.day.n >= DAY_CAP) return {pts:0, why:'cap'};

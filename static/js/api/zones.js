@@ -24,35 +24,47 @@
     }).catch(soft);
   }
 
-  function sendSpot(m, occupied){
-    if(!m.spotId || m.spotId.indexOf('local:') === 0){
-      say(new Error('Эта разметка ещё не сопоставлена с сервером')); return;
-    }
-    return API.post('/api/spots/' + encodeURIComponent(m.spotId) + '/status/', {is_occupied:occupied});
+  function findBay(id){
+    var found=null;ZS.forEach(function(z){z.bays.forEach(function(b,k){if(b.id===id)found={z:z,b:b,k:k};});});return found;
   }
-  ev('mark', function(d){
-    var m = d.mark;
-    if(!m || !m.sp || !on('spots')) return;
-    var request = sendSpot(m, m.kind === 'busy');
-    if(!request) request = Promise.reject(new Error('Отметка не отправлена'));
-    request.catch(function(e){
-      ZS.forEach(function(z){ z.bays.forEach(function(b, k){ if(b.id === m.spotId) SPOTS.setBay(z, k, m.prevBusy, 'user'); }); });
-      if(state.last === m) state.last = null;
-      if(typeof BONUS !== 'undefined') BONUS.revoke(m);
-      state.helped = Math.max(0, state.helped - 1); repaint(); say(e);
+  API.spotPending=false;
+  function sendSpot(m,occupied){
+    if(typeof occupied!=='boolean')return Promise.reject(new Error('Неизвестный прежний статус нельзя восстановить этой командой'));
+    if(!findBay(m.spotId))return Promise.reject(new Error('Место отсутствует в текущем наборе'));
+    API.spotPending=true;
+    return API.post('/api/spots/'+encodeURIComponent(m.spotId)+'/status/',{is_occupied:occupied}).finally(function(){API.spotPending=false;});
+  }
+  API.loadSpots=function(){
+    if(API.spotPending)return Promise.resolve();
+    SPOT_DATA.status='loading';SPOT_DATA.error='';render();
+    return API.get('/api/spots/').then(function(data){
+      applyCanonical(data);
+      state.over={};state.spot=null;
+      if(!ZS.some(function(z){return z.id===state.sel;}))state.sel=defSel();
+      if(MAP.reset)MAP.reset();
+      SPOT_DATA.status='ready';render();
+    }).catch(function(e){SPOT_DATA.status='error';SPOT_DATA.error=e.message||'Ошибка связи с сервером';render();});
+  };
+  ev('mark',function(d){
+    var m=d.mark;if(!m || !m.sp)return;
+    sendSpot(m,m.kind==='busy').then(function(){
+      var it=findBay(m.spotId);if(it)it.b.isOccupied=m.kind==='busy';
+      toast('Отметка сохранена');repaint();
+    }).catch(function(e){
+      var it=findBay(m.spotId);if(it)SPOTS.setBay(it.z,it.k,m.prevBusy,'server');
+      if(state.last===m)state.last=null;
+      if(typeof BONUS!=='undefined')BONUS.revoke(m);
+      state.helped=Math.max(0,state.helped-1);repaint();say(e);
     });
   });
-  ev('unmark', function(d){
-    var m = d.mark; if(!m || !m.sp || !on('spots')) return;
-    var request = sendSpot(m, m.prevBusy); if(request) request.catch(say);
+  ev('unmark',function(d){
+    var m=d.mark;if(!m || !m.sp)return;
+    sendSpot(m,m.prevBusy).then(function(){var it=findBay(m.spotId);if(it)it.b.isOccupied=m.prevBusy;repaint();}).catch(function(e){
+      var it=findBay(m.spotId);if(it)SPOTS.setBay(it.z,it.k,m.kind==='busy','server');repaint();say(e);
+    });
   });
-  ev('ready', function(){
-    if(on('spots')) API.get('/api/spots/').then(function(data){
-      var by = {}; data.features.forEach(function(f){ by[f.properties.id] = f.properties; });
-      ZS.forEach(function(z){ z.bays.forEach(function(b, k){
-        var p = by[b.id]; if(p && typeof p.is_occupied === 'boolean') SPOTS.setBay(z, k, p.is_occupied, 'server');
-      }); }); repaint();
-    }).catch(soft);
+  ev('ready',function(){
+    API.loadSpots();
     if(on('zones')) loadZones();
     if(on('marks')){ pollMarks(); setInterval(function(){ if(!document.hidden && state.tab === 'map') pollMarks(); }, 30000); }
   });

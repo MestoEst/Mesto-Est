@@ -5,13 +5,12 @@
         номера мест, подписи зон и улиц, демо-движение машин.
    Если Leaflet не загрузился, слой 2 не включается, а слой 1 (ряд мест в панели) продолжает работать.
 
-   «Занято» сейчас оценка по зоне (см. state.js). Когда сервер начнёт присылать is_occupied для каждого места,
-   достаточно подставить его в SPOTS.isFree (одна функция ниже). */
+   Статусы приходят из API: true/false/null; неизвестные не получают машинку. */
 var SPOTS = (function(){
   var MIN_ZOOM = 18, NUM_ZOOM = 19.5, ZONE_ZOOM = 17.5, GAP_M = 0.43;
   var BODY = [['#1d211b', '#2a2f27'], ['#f2f2ed', '#e1e1da'], ['#a9aea4', '#bfc3b9'], ['#2e4259', '#3b536f'], ['#6f3039', '#843d48'], ['#c9ccc4', '#d9dcd4']];
 
-  state.spot = null;      /* выбранное место (номер в зоне, с нуля) */
+  state.spot = null;      /* постоянный ID выбранного места */
   state.over = {};        /* изменения по постоянному ID: {spotId: {busy, by, at}} */
 
   /* ---------- 1. чистые функции ---------- */
@@ -72,29 +71,23 @@ var SPOTS = (function(){
   function carSVG(v, w, h){ return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="-3 0 46 90" width="'+w+'" height="'+h+'" aria-hidden="true">'+carInner(v)+'</svg>'; }
 
   /* ---------- состояние: свободно или занято ---------- */
-  var baseFree = freeEst;      /* оценка по зоне из state.js */
-  function baseIsFree(z, k, t){ return z.rank[k] < baseFree(z, t); }
-  function isNow(t){ return t === undefined && !state.mapFc; }
-  function over(z, k){ return state.over[key(z, k)]; }
-  function isFree(z, k, t){
-    if(isNow(t)){ var o = over(z, k); if(o) return !o.busy; }
-    return baseIsFree(z, k, t);
+  function over(z,k){ return state.over[key(z,k)]; }
+  function isFree(z,k,t){
+    if(t || state.mapFc) return null;  // no invented forecasts
+    var o=over(z,k),busy=o ? o.busy : z.bays[k].isOccupied;
+    return busy == null ? null : !busy;
   }
-  /* счётчик «≈N свободно» учитывает машины, которые приехали и уехали */
-  freeEst = function(z, t){
-    var n = baseFree(z, t);
-    if(!z.rank || !isNow(t)) return n;
-    var d = 0;
-    z.bays.forEach(function(b, k){ var o = over(z, k); if(!o) return; var base = z.rank[k] < n; if(o.busy && base) d--; else if(!o.busy && !base) d++; });
-    return clamp(n + d, 0, z.spots);
-  };
-  function setBay(z, k, busy, by){
-    var cur = isFree(z, k);
-    if(cur === !busy && !over(z, k)){ /* уже так и есть: просто запомним, чтобы демо не трогало */ }
-    state.over[key(z, k)] = {busy:!!busy, by:by || 'user', at:Date.now()};
-    if(cur !== !busy) flip(z, k, !!busy);
+  function counts(z){
+    var result={free:0,busy:0,unknown:0};
+    z.bays.forEach(function(b,k){var f=isFree(z,k);result[f===true?'free':f===false?'busy':'unknown']++;});return result;
   }
-  function listingAt(zid, k){ return allListings().filter(function(l){ return l.zone === zid && l.bay === k; })[0]; }
+  freeEst=function(z){return counts(z).free;};
+  function setBay(z,k,busy,by){
+    var cur=isFree(z,k);
+    state.over[key(z,k)]={busy:busy==null?null:!!busy,by:by||'user',at:Date.now()};
+    if(cur!==!busy && busy!=null)flip(z,k,!!busy);
+  }
+  function listingAt(zid, k){ return allListings().filter(function(l){ return l.spotId === zone(zid).bays[k].id; })[0]; }
 
   /* ---------- ряд мест в панели ---------- */
   /* o: {act:'spot' — что делает нажатие, sel: выбранное место, id, rent: показывать ли значок аренды} */
@@ -103,16 +96,16 @@ var SPOTS = (function(){
     var action = o.act || 'spot', cur = o.sel === undefined ? state.spot : o.sel, showRent = o.rent !== false;
     var h = '<div class="strip" id="'+(o.id || 'strip')+'" role="group" aria-label="Места зоны: нажмите, чтобы выбрать">';
     z.bays.forEach(function(b, k){
-      var free = isFree(z, k), sel = cur === k, ls = showRent && listingAt(z.id, k);
-      h += '<button type="button" class="bay '+(free ? 'free' : 'busy')+(sel ? ' sel' : '')+(ls ? ' rent' : '')+'"'+A(action, k)+' aria-pressed="'+sel+'" aria-label="Место №'+(k+1)+', '+(free ? 'свободно' : 'занято')+(ls ? ', сдаётся' : '')+'">' +
-        (free ? '' : '<span class="car">'+carSVG(variant(z, k), '100%', '100%')+'</span>') + '<i>'+(k + 1)+'</i>' + (ls ? '<u>Br</u>' : '') + '</button>';
+      var free = isFree(z, k), sel = cur === b.id, ls = showRent && listingAt(z.id, k);
+      h += '<button type="button" class="bay '+(free === true ? 'free' : free === false ? 'busy' : 'unknown')+(sel ? ' sel' : '')+(ls ? ' rent' : '')+'"'+A(action,b.id)+' aria-pressed="'+sel+'" aria-label="Место №'+z.bays[k].num+', '+(free === true ? 'свободно' : free === false ? 'занято' : 'статус неизвестен')+(ls ? ', сдаётся' : '')+'">' +
+        (free !== false ? '' : '<span class="car">'+carSVG(variant(z, k), '100%', '100%')+'</span>') + '<i>'+z.bays[k].num+'</i>' + (ls ? '<u>Br</u>' : '') + '</button>';
     });
     return h + '</div>';
   }
   function spotRow(z){
-    if(state.spot == null || !z.bays[state.spot]) return '<div class="dockhint spotnote h-mob">Нажмите на место в ряду: покажем номер и можно отметить именно его.</div>';
-    var k = state.spot, free = isFree(z, k), ls = listingAt(z.id, k);
-    return '<div class="spotrow"><div class="sn">№'+(k + 1)+'</div><div class="sb"><b>'+(free ? 'Свободно' : 'Занято')+'</b><span>'+esc(z.label)+'</span></div>' +
+    if(state.spot == null || !z.bays.some(function(b){return b.id===state.spot;})) return '<div class="dockhint spotnote h-mob">Нажмите на место в ряду: покажем номер и можно отметить именно его.</div>';
+    var k = z.bays.findIndex(function(b){return b.id===state.spot;}), free = isFree(z, k), ls = listingAt(z.id, k);
+    return '<div class="spotrow"><div class="sn">№'+z.bays[k].num+'</div><div class="sb"><b>'+(free === true ? 'Свободно' : free === false ? 'Занято' : 'Статус неизвестен')+'</b><span>'+esc(z.label)+'</span></div>' +
       (ls ? '<button type="button" class="chip lime"'+A('book', ls.id)+'>Арендовать</button>' : '') + '</div>';
   }
 
@@ -127,7 +120,7 @@ var SPOTS = (function(){
 
   /* 1-й шаг: слои под местами (асфальт). Вызывать до создания полигонов, карте вид пока не нужен */
   function attach(m){
-    map = m; colors();
+    map = m; geo={};carM={};numM={};zoneM={};leaving={};fx={};lastZoom=null; colors();
     haloLayer = L.layerGroup().addTo(map);
     sel = L.polyline([], {weight:8, color:C.ink, opacity:0.28, lineCap:'round', lineJoin:'round', interactive:false}).addTo(haloLayer);
     halos = [];
@@ -141,7 +134,7 @@ var SPOTS = (function(){
   function start(){
     map.on('zoomend', onZoom); map.on('moveend', sync);
     onZoom();
-    startDemo();
+    /* Demo movement must never overwrite real server statuses. */
   }
   function bayW(){ return Math.max(0.8, ppm()*GAP_M*1.4); }      /* толщина обводки слота, px: скругляет углы */
   function onZoom(){
@@ -164,7 +157,7 @@ var SPOTS = (function(){
   function bayStyle(z, k, free, o){
     var near = map && map.getZoom() >= MIN_ZOOM, lime = C.lime;
     var busyFill = near ? C.slot : C.zlo;
-    var fill = free ? lime : busyFill, picked = state.spot === k && z.id === state.sel && state.layer === 'places';
+    var fill = free === true ? lime : free === false ? busyFill : '#b1afa8', picked = state.spot === key(z,k) && z.id === state.sel && state.layer === 'places';
     var st = {fillColor:fill, fillOpacity:o.fade, color:fill, opacity:o.fade, weight:near ? bayW() : 0.6, lineJoin:'round', lineCap:'round'};
     if(!near){ st.color = o.on ? C.ink : fill; st.opacity = o.on ? 0.9 : 1; st.weight = o.on ? 1.6 : 0.8; }
     if(picked){ st.color = C.ink; st.opacity = 1; st.weight = near ? Math.max(2.4, bayW()*0.5) : 2.4; }
@@ -179,7 +172,7 @@ var SPOTS = (function(){
   }
   function numIcon(z, k, free, p){
     var fs = clamp(p*1.25, 9, 26);
-    return L.divIcon({className:'sp-num', iconSize:[0, 0], iconAnchor:[0, 0], html:'<span class="'+(free ? 'f' : 'b')+'" style="font-size:'+fs.toFixed(1)+'px">'+(k + 1)+'</span>'});
+    return L.divIcon({className:'sp-num', iconSize:[0, 0], iconAnchor:[0, 0], html:'<span class="'+(free === true ? 'f' : free === false ? 'b' : 'u')+'" style="font-size:'+fs.toFixed(1)+'px">'+z.bays[k].num+'</span>'});
   }
   function zoneIcon(z){ return L.divIcon({className:'sp-zone', iconSize:[0, 0], iconAnchor:[0, 0], html:'<span>'+esc(z.name)+'</span>'}); }
   function elOf(m){ return m && m.getElement ? m.getElement() : null; }
@@ -198,7 +191,7 @@ var SPOTS = (function(){
       z.bays.forEach(function(b, k){
         if(!view.contains([b.c[1], b.c[0]])) return;
         var id = key(z, k), free = isFree(z, k);
-        if(!free){
+        if(free === false){
           wantC[id] = 1;
           var m = carM[id];
           if(!m){ var arr = fx[id] === 'arrive'; m = carM[id] = L.marker(info(z, k).ll, {icon:carIcon(z, k, arr), interactive:false, keyboard:false, opacity:fade}).addTo(carLayer); if(arr) arrive(m); delete fx[id]; }
@@ -207,7 +200,7 @@ var SPOTS = (function(){
         }
         if(zm >= NUM_ZOOM && state.layer === 'places'){
           wantN[id] = 1;
-          var nm = numM[id], st = free ? 'f' : 'b';
+          var nm = numM[id], st = free === true ? 'f' : free === false ? 'b' : 'u';
           if(!nm){ nm = numM[id] = L.marker(info(z, k).ll, {icon:numIcon(z, k, free, p), interactive:false, keyboard:false}).addTo(numLayer); nm._st = st; nm._z = zm; }
           else if(nm._st !== st || nm._z !== zm){ nm.setIcon(numIcon(z, k, free, p)); nm._st = st; nm._z = zm; }
         }
@@ -236,7 +229,7 @@ var SPOTS = (function(){
   function streetPills(group, onPick){
     STREETS.forEach(function(st){
       var free = 0; st.zones.forEach(function(zid){ var z = zone(zid); if(z) free += freeEst(z); });
-      var m = L.marker(ll(st.c), {icon:L.divIcon({className:'sp-street', iconSize:[0, 0], iconAnchor:[0, 0], html:'<span><b>'+esc(st.name)+'</b><i>≈'+free+'</i></span>'}), keyboard:false});
+      var m = L.marker(ll(st.c), {icon:L.divIcon({className:'sp-street', iconSize:[0, 0], iconAnchor:[0, 0], html:'<span><b>'+esc(st.name)+'</b><i>'+free+'</i></span>'}), keyboard:false});
       m.on('click', function(){ onPick(st); });
       m.addTo(group);
     });
@@ -259,7 +252,7 @@ var SPOTS = (function(){
     ZS.forEach(function(z){ z.bays.forEach(function(b, k){
       if(!view.contains([b.c[1], b.c[0]])) return;
       var o = over(z, k); if(o && o.by === 'user' && now - o.at < 600000) return;
-      if(z.id === state.sel && state.spot === k) return;
+      if(z.id === state.sel && state.spot === key(z,k)) return;
       c.push([z, k]);
     }); });
     if(!c.length) return;
@@ -270,7 +263,7 @@ var SPOTS = (function(){
   }
 
   return {
-    id:key, isFree:isFree, setBay:setBay, strip:strip, spotRow:spotRow, listingAt:listingAt, carSVG:carSVG, variant:variant,
+    id:key, counts:counts, isFree:isFree, setBay:setBay, strip:strip, spotRow:spotRow, listingAt:listingAt, carSVG:carSVG, variant:variant,
     attach:attach, start:start, colors:colors, sync:sync, onZoom:onZoom, themeChanged:themeChanged, updateSel:updateSel, bayStyle:bayStyle, slotLatLngs:slotLatLngs, info:info,
     streetPills:streetPills, ppm:function(){ return map ? ppm() : 1; }, nearZoom:function(){ return !!map && map.getZoom() >= MIN_ZOOM; }
   };

@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../static/css/core/mesto.css">
 <link rel="stylesheet" href="../static/css/owner/owner.css">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="../static/vendor/leaflet/leaflet.css">
 <link rel="stylesheet" href="../static/css/map/mesto-map.css">
 <link rel="stylesheet" href="../static/css/core/product.css">
 <link rel="stylesheet" href="../static/css/map/spots.css">
@@ -25,7 +25,7 @@
 </div>
 <div id="modal" class="modal" hidden><div class="msheet" role="dialog" aria-modal="true" id="msheet"></div></div>
 <div id="toast" role="status" aria-live="polite"></div>
-<script>window.MESTO_CONFIG = {api: false};  </script>
+<script>window.MESTO_CONFIG = {api: {spots: true}};  </script>
 <script src="../static/js/data/mesto-data.js"></script>
 <script src="../static/js/data/mesto-streets.js"></script>
 <script src="../static/js/core/util.js"></script>
@@ -44,7 +44,7 @@
 <script src="../static/js/features/offer/offer.js"></script>
 <script src="../static/js/features/account/account.js"></script>
 <script src="../static/js/features/owner/owner.js"></script>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="../static/vendor/leaflet/leaflet.js"></script>
 <script src="../static/js/features/map/mesto-map.js"></script>
 </body>
 </html>

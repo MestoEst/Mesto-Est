@@ -4,8 +4,8 @@ from .models import ParkingSpot, SpotObservation, SpotHourStat, UserProfile
 
 @admin.register(ParkingSpot)
 class ParkingSpotAdmin(admin.ModelAdmin):
-    list_display = ("code", "block", "is_occupied", "status_updated_at")
-    list_filter = ("block", "is_occupied")
+    list_display = ("code", "dataset", "is_active", "block", "display_number", "is_occupied", "status_updated_at")
+    list_filter = ("dataset", "is_active", "block", "is_occupied")
     search_fields = ("code",)
 
 

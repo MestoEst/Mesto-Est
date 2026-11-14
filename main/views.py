@@ -15,7 +15,9 @@ from django.db import transaction, IntegrityError
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 
-from .models import ParkingSpot, SpotObservation, SpotHourStat, UserProfile
+from .models import ParkingSpot, SpotObservation, SpotHourStat, UserProfile, ParkingZone
+
+from .spot_identity import DATASET
 
 DAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
 
@@ -140,19 +142,23 @@ def window_stats(**filters):
 
 
 @require_GET
+@transaction.atomic
 def spots_geojson(request):
     """Все места в формате GeoJSON + текущий статус."""
     now = timezone.localtime()
     stats = {r["spot_id"]: percent(r["t"], r["f"])
-             for r in window_stats(weekday=now.isoweekday(), hour=now.hour)}
+             for r in window_stats(spot__dataset=DATASET, spot__is_active=True, weekday=now.isoweekday(), hour=now.hour)}
     features = []
-    for s in ParkingSpot.objects.all():
+    for s in ParkingSpot.objects.filter(dataset=DATASET, is_active=True).select_related("zone").order_by("zone__display_order", "display_order", "code"):
         features.append({
             "type": "Feature",
             "geometry": s.geometry,
             "properties": {
                 "id": s.code,
-                "zone": s.block,
+                "zone": s.zone_id,
+                "display_number": s.display_number,
+                "display_order": s.display_order,
+                "row_id": s.row_id,
                 "code": s.code,
                 "block": s.block,
                 "is_occupied": s.is_occupied,
@@ -160,7 +166,10 @@ def spots_geojson(request):
                 "usual_free_percent": stats.get(s.id),
             },
         })
-    return JsonResponse({"type": "FeatureCollection", "features": features})
+    zones = [{"id":z.code,"name":z.name,"display_number":z.display_number,
+              "display_order":z.display_order,"street_id":z.street_id,"street_name":z.street_name}
+             for z in ParkingZone.objects.order_by("display_order", "code")]
+    return JsonResponse({"type":"FeatureCollection", "dataset":DATASET,"zones":zones,"features":features})
 
 
 @csrf_exempt
@@ -168,7 +177,7 @@ def spots_geojson(request):
 @transaction.atomic
 def set_status(request, code):
     """Принять статус места (занято/свободно) и записать в историю."""
-    spot = get_object_or_404(ParkingSpot, code=code)
+    spot = get_object_or_404(ParkingSpot.objects.select_for_update(), dataset=DATASET, is_active=True, code=code)
     try:
         occupied = json.loads(request.body).get("is_occupied")
     except (json.JSONDecodeError, AttributeError):
@@ -196,7 +205,7 @@ def set_status(request, code):
 @require_GET
 def spot_heatmap(request, code):
     """Матрица: строки = часы 0-23, столбцы = дни Пн-Вс, значения = % свободно."""
-    spot = get_object_or_404(ParkingSpot, code=code)
+    spot = get_object_or_404(ParkingSpot, dataset=DATASET, is_active=True, code=code)
     matrix = [[None] * 7 for _ in range(24)]
     for r in window_stats(spot=spot):
         matrix[r["hour"]][r["weekday"] - 1] = percent(r["t"], r["f"])

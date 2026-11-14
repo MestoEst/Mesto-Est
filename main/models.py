@@ -2,15 +2,39 @@ from django.db import models
 from django.utils import timezone
 from django.conf import settings
 
+class ParkingZone(models.Model):
+    code = models.CharField(max_length=50, primary_key=True)
+    name = models.CharField(max_length=100)
+    display_number = models.PositiveIntegerField()
+    display_order = models.PositiveIntegerField()
+    street_id = models.CharField(max_length=50)
+    street_name = models.CharField(max_length=100)
+
+
+class SpotIdentity(models.Model):
+    """Append-only registry: even a deleted ParkingSpot must never free an ID."""
+    code = models.CharField(max_length=50, primary_key=True)
+    used = models.BooleanField(default=False)
+
+
 class ParkingSpot(models.Model):
-    code = models.CharField(max_length=50, unique=True)
+    code = models.CharField(max_length=50)
+    dataset = models.CharField(max_length=30, default='legacy')
+    is_active = models.BooleanField(default=True)
+    zone = models.ForeignKey(ParkingZone, null=True, blank=True, on_delete=models.PROTECT)
+    display_number = models.PositiveIntegerField(null=True, blank=True)
+    display_order = models.PositiveIntegerField(default=0)
+    row_id = models.CharField(max_length=50, blank=True)
     block = models.CharField(max_length=50, blank=True)
     geometry = models.JSONField()
     is_occupied = models.BooleanField(null=True)
     status_updated_at = models.DateTimeField(null=True, blank=True)
 
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['dataset', 'code'], name='spot_dataset_code_unique')]
+
     def __str__(self):
-        return self.code
+        return f'{self.dataset}:{self.code}'
 
 
 class SpotObservation(models.Model):

@@ -20,14 +20,12 @@ function shift(z,t){
   return s;
 }
 function frac(z,t){
-  t = t || T();
-  var u = z.usual && z.usual[t.day] && z.usual[t.day][t.hour], base = (u != null) ? u/100 : 1 - load(z,t);   /* z.usual приходит из /api/zones/ */
-  return clamp(base + shift(z,t), 0.02, 0.98);
+  var counts=SPOTS.counts(z);return counts.free/z.spots;
 }
-function freeEst(z,t){ return Math.max(0, Math.round(z.spots * frac(z,t))); }
+function freeEst(z,t){ return 0; } // replaced by SPOTS after scripts load
 function pct(z,t){ return Math.round(frac(z,t)*100); }
-function level(z){ var c = frac(z); return c >= 0.6 ? 'hi' : (c >= 0.35 ? 'mid' : 'lo'); }
-function lvlText(z){ var l = level(z); return l==='hi' ? 'Места есть' : (l==='mid' ? 'Придётся поискать' : 'Почти нет мест'); }
+function level(z){ var c=frac(z);return c>=.6?'hi':c>=.35?'mid':'lo'; }
+function lvlText(z){var c=SPOTS.counts(z);return c.busy+' занято, '+c.unknown+' неизвестно';}
 function perim(){ return DISTRICT.zones.filter(function(z){ return z.type === 'perimeter'; }); }
 function allListings(){ return state.mine.concat(DISTRICT.listings); }
 function listing(id){ return allListings().filter(function(l){ return l.id === id; })[0]; }

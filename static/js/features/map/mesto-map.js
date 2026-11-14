@@ -68,7 +68,7 @@
       z.bays.forEach(function (b, k) {
         var pts = spots(function (S) { return S.slotLatLngs(z, k); }) || b.poly.map(ll);
         var pg = L.polygon(pts, { weight: 0.6, smoothFactor: 0, lineJoin: 'round', lineCap: 'round' }).addTo(map);
-        pg.on('click', function () { state.sel = z.id; state.spot = k; state.layer = 'places'; render(); });
+        pg.on('click', function () { state.sel = z.id; state.spot = b.id; state.layer = 'places'; render(); });
         items.push({ pg: pg, z: z, k: k });
       });
     });
@@ -102,11 +102,11 @@
       var on = it.z.id === state.sel && state.layer === 'places';
       var st = spots(function (S) { return S.bayStyle(it.z, it.k, S.isFree(it.z, it.k), { fade: fade, on: on }); });
       if (!st) {   /* без spots.js: простая раскраска по оценке зоны */
-        var isFree = it.z.rank[it.k] < freeEst(it.z, T());
-        st = { fillColor: isFree ? cFree : cBusy, fillOpacity: fade, color: cssVar('--ink', '#0E100D'), opacity: on ? 1 : 0.35, weight: on ? 2 : 0.6 };
+        var occupied = it.z.bays[it.k].isOccupied, isFree = occupied === false;
+        st = { fillColor: occupied == null ? '#b1afa8' : isFree ? cFree : cBusy, fillOpacity: fade, color: cssVar('--ink', '#0E100D'), opacity: on ? 1 : 0.35, weight: on ? 2 : 0.6 };
       }
       it.pg.setStyle(st);
-      if (on && state.spot === it.k) it.pg.bringToFront();
+      if (on && state.spot === it.z.bays[it.k].id) it.pg.bringToFront();
     });
     spots(function (S) { S.updateSel(); S.sync(); });
 
@@ -137,7 +137,8 @@
     if (!s || !map) return;
     map.fitBounds(L.latLngBounds(s.bc.map(ll)), L.extend({ maxZoom: 19 }, padding()));
   }
-  function focusSpot(zid, k) {
+  function focusSpot(zid, id) {
+    var selected=zone(zid);var k=selected ? selected.bays.findIndex(function(b){return b.id===id;}) : -1;
     touched = true;
     var z = zone(zid);
     if (!z || !map || !z.bays[k]) return;
@@ -172,6 +173,7 @@
     if (first) init(); else map.invalidateSize(false);
     draw();
   };
+  MAP.reset = function(){if(map)map.remove();map=null;holder=null;items=[];touched=false;};
   MAP.draw = draw;
   MAP.focusZone = focusZone;
   MAP.focusStreet = focusStreet;
