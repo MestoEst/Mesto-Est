@@ -151,6 +151,8 @@ def spots_geojson(request):
             "type": "Feature",
             "geometry": s.geometry,
             "properties": {
+                "id": s.code,
+                "zone": s.block,
                 "code": s.code,
                 "block": s.block,
                 "is_occupied": s.is_occupied,
@@ -163,6 +165,7 @@ def spots_geojson(request):
 
 @csrf_exempt
 @require_POST
+@transaction.atomic
 def set_status(request, code):
     """Принять статус места (занято/свободно) и записать в историю."""
     spot = get_object_or_404(ParkingSpot, code=code)
@@ -187,7 +190,7 @@ def set_status(request, code):
         total=F("total") + 1,
         free=F("free") + (0 if occupied else 1),
     )
-    return JsonResponse({"ok": True, "code": code, "is_occupied": occupied})
+    return JsonResponse({"ok": True, "id": code, "code": code, "is_occupied": occupied})
 
 
 @require_GET

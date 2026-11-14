@@ -112,7 +112,7 @@ act('mark', function(v){
   var nw = realNow(), z = zone(state.sel), k = state.spot, m = {zone:state.sel, kind:v, hour:nw.hour, day:nw.day, time:nw.time};
   var award = (typeof BONUS !== 'undefined') ? BONUS.award(m, k) : null;
   if(k != null){   /* отметка конкретного места: машинка приезжает или уезжает, оценку всей зоны не двигаем */
-    m.spot = k + 1; m.prevBusy = !SPOTS.isFree(z, k); m.sp = true;
+    m.spot = k + 1; m.spotId = SPOTS.id(z, k); m.prevBusy = !SPOTS.isFree(z, k); m.sp = true;
     SPOTS.setBay(z, k, v === 'busy', 'user');
   } else state.marks.push(m);
   state.last = m; state.helped += 1; m.award = award ? award.pts : 0;
@@ -122,7 +122,7 @@ act('mark', function(v){
 });
 act('undo', function(){
   var m = state.last; emit('unmark', {mark:m});
-  if(m && m.sp){ var z = zone(m.zone); if(z && state.over[z.id]) SPOTS.setBay(z, m.spot - 1, m.prevBusy, 'user'); }
+  if(m && m.sp){ ZS.forEach(function(z){ z.bays.forEach(function(b, k){ if(b.id === m.spotId) SPOTS.setBay(z, k, m.prevBusy, 'user'); }); }); }
   var i = state.marks.indexOf(m);
   if(i >= 0) state.marks.splice(i,1);
   state.helped = Math.max(0, state.helped-1);

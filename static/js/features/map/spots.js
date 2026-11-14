@@ -12,11 +12,11 @@ var SPOTS = (function(){
   var BODY = [['#1d211b', '#2a2f27'], ['#f2f2ed', '#e1e1da'], ['#a9aea4', '#bfc3b9'], ['#2e4259', '#3b536f'], ['#6f3039', '#843d48'], ['#c9ccc4', '#d9dcd4']];
 
   state.spot = null;      /* выбранное место (номер в зоне, с нуля) */
-  state.over = {};        /* что поменялось на местах: {зона: {номер: {busy, by, at}}} */
+  state.over = {};        /* изменения по постоянному ID: {spotId: {busy, by, at}} */
 
   /* ---------- 1. чистые функции ---------- */
   function hash(s){ var h = 2166136261; for(var i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return ((h >>> 0) % 100000) / 100000; }
-  function key(z, k){ return z.id + ':' + k; }
+  function key(z, k){ return z.bays[k].id; }
   function variant(z, k){ return Math.floor(hash('v' + key(z, k)) * BODY.length); }
 
   /* форма места: центр, длина, ширина, угол (метры, x на восток, y на юг) */
@@ -75,23 +75,23 @@ var SPOTS = (function(){
   var baseFree = freeEst;      /* оценка по зоне из state.js */
   function baseIsFree(z, k, t){ return z.rank[k] < baseFree(z, t); }
   function isNow(t){ return t === undefined && !state.mapFc; }
-  function over(z, k){ var o = state.over[z.id]; return o && o[k]; }
+  function over(z, k){ return state.over[key(z, k)]; }
   function isFree(z, k, t){
     if(isNow(t)){ var o = over(z, k); if(o) return !o.busy; }
     return baseIsFree(z, k, t);
   }
   /* счётчик «≈N свободно» учитывает машины, которые приехали и уехали */
   freeEst = function(z, t){
-    var n = baseFree(z, t), o = state.over[z.id];
-    if(!o || !z.rank || !isNow(t)) return n;
+    var n = baseFree(z, t);
+    if(!z.rank || !isNow(t)) return n;
     var d = 0;
-    Object.keys(o).forEach(function(k){ var base = z.rank[k] < n; if(o[k].busy && base) d--; else if(!o[k].busy && !base) d++; });
+    z.bays.forEach(function(b, k){ var o = over(z, k); if(!o) return; var base = z.rank[k] < n; if(o.busy && base) d--; else if(!o.busy && !base) d++; });
     return clamp(n + d, 0, z.spots);
   };
   function setBay(z, k, busy, by){
     var cur = isFree(z, k);
     if(cur === !busy && !over(z, k)){ /* уже так и есть: просто запомним, чтобы демо не трогало */ }
-    (state.over[z.id] = state.over[z.id] || {})[k] = {busy:!!busy, by:by || 'user', at:Date.now()};
+    state.over[key(z, k)] = {busy:!!busy, by:by || 'user', at:Date.now()};
     if(cur !== !busy) flip(z, k, !!busy);
   }
   function listingAt(zid, k){ return allListings().filter(function(l){ return l.zone === zid && l.bay === k; })[0]; }
@@ -270,7 +270,7 @@ var SPOTS = (function(){
   }
 
   return {
-    isFree:isFree, setBay:setBay, strip:strip, spotRow:spotRow, listingAt:listingAt, carSVG:carSVG, variant:variant,
+    id:key, isFree:isFree, setBay:setBay, strip:strip, spotRow:spotRow, listingAt:listingAt, carSVG:carSVG, variant:variant,
     attach:attach, start:start, colors:colors, sync:sync, onZoom:onZoom, themeChanged:themeChanged, updateSel:updateSel, bayStyle:bayStyle, slotLatLngs:slotLatLngs, info:info,
     streetPills:streetPills, ppm:function(){ return map ? ppm() : 1; }, nearZoom:function(){ return !!map && map.getZoom() >= MIN_ZOOM; }
   };

@@ -24,12 +24,41 @@
     }).catch(soft);
   }
 
+  function sendSpot(m, occupied){
+    if(!m.spotId || m.spotId.indexOf('local:') === 0){
+      say(new Error('Эта разметка ещё не сопоставлена с сервером')); return;
+    }
+    return API.post('/api/spots/' + encodeURIComponent(m.spotId) + '/status/', {is_occupied:occupied});
+  }
+  ev('mark', function(d){
+    var m = d.mark;
+    if(!m || !m.sp || !on('spots')) return;
+    var request = sendSpot(m, m.kind === 'busy');
+    if(!request) request = Promise.reject(new Error('Отметка не отправлена'));
+    request.catch(function(e){
+      ZS.forEach(function(z){ z.bays.forEach(function(b, k){ if(b.id === m.spotId) SPOTS.setBay(z, k, m.prevBusy, 'user'); }); });
+      if(state.last === m) state.last = null;
+      if(typeof BONUS !== 'undefined') BONUS.revoke(m);
+      state.helped = Math.max(0, state.helped - 1); repaint(); say(e);
+    });
+  });
+  ev('unmark', function(d){
+    var m = d.mark; if(!m || !m.sp || !on('spots')) return;
+    var request = sendSpot(m, m.prevBusy); if(request) request.catch(say);
+  });
   ev('ready', function(){
+    if(on('spots')) API.get('/api/spots/').then(function(data){
+      var by = {}; data.features.forEach(function(f){ by[f.properties.id] = f.properties; });
+      ZS.forEach(function(z){ z.bays.forEach(function(b, k){
+        var p = by[b.id]; if(p && typeof p.is_occupied === 'boolean') SPOTS.setBay(z, k, p.is_occupied, 'server');
+      }); }); repaint();
+    }).catch(soft);
     if(on('zones')) loadZones();
     if(on('marks')){ pollMarks(); setInterval(function(){ if(!document.hidden && state.tab === 'map') pollMarks(); }, 30000); }
   });
 
   ev('mark', function(d){
+    if(d.mark && d.mark.sp) return;
     if(!on('marks')) return;
     var m = d.mark, g = d.gps || {};
     API.post('/api/zones/' + encodeURIComponent(m.zone) + '/marks/', {kind:m.kind, lat:g.lat, lng:g.lng, accuracy:g.acc}).then(function(r){ m.sid = r.id; }).catch(function(e){
@@ -38,7 +67,7 @@
     });
   });
   ev('unmark', function(d){
-    var m = d.mark; if(!on('marks') || !m) return;
+    var m = d.mark; if(!on('marks') || !m || m.sp) return;
     var go = function(){ if(m.sid) API.del('/api/zones/' + encodeURIComponent(m.zone) + '/marks/' + m.sid + '/').catch(soft); };
     if(m.sid) go(); else setTimeout(go, 800);
   });
