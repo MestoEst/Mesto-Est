@@ -1,6 +1,7 @@
 """Canonical GeoJSON contract. No coordinate/order-based identity assignment."""
 import hashlib
 import json
+import math
 from django.core.management.base import CommandError
 from shapely.geometry import shape
 
@@ -25,6 +26,17 @@ def positive(value, label):
     return value
 
 
+def validate_appearance(value, zone=False):
+    if not isinstance(value,dict): raise CommandError('appearance должен быть объектом')
+    if zone:
+        if value.get('profile','home') not in ('home','edge','park'): raise CommandError('Неизвестный профиль отображения')
+        offset=value.get('offset',0)
+        if type(offset) not in (int,float) or not math.isfinite(offset) or not -.5 <= offset <= .5: raise CommandError('Неверное смещение оценки')
+    else:
+        score=value.get('score',.5)
+        if type(score) not in (int,float) or not math.isfinite(score) or not 0 <= score <= 1: raise CommandError('Неверная оценка оформления')
+
+
 def validate_geojson(data):
     if not isinstance(data, dict) or data.get('type') != 'FeatureCollection' or data.get('dataset') != DATASET:
         raise CommandError('Ожидается канонический FeatureCollection с dataset=canonical-v1; архивные файлы запрещены')
@@ -35,12 +47,13 @@ def validate_geojson(data):
         if not isinstance(z, dict): raise CommandError('Некорректная зона')
         code = identity(z.get('id'), 'zone.id')
         n = positive(z.get('display_number'), code); order = positive(z.get('display_order'), code)
-        if code in zones or n in numbers or order in orders:
+        if code in zones or (z.get('street_id'),n) in numbers or order in orders:
             raise CommandError(f'Повтор ID, номера или порядка зоны: {code}')
         for field in ['name', 'street_id', 'street_name']:
             if not isinstance(z.get(field), str) or not z[field].strip() or len(z[field]) > (50 if field == 'street_id' else 100):
                 raise CommandError(f'{code}: неверное поле {field}')
-        zones[code] = z; numbers.add(n); orders.add(order)
+        validate_appearance(z.get('appearance',{}), zone=True)
+        zones[code] = z; numbers.add((z['street_id'],n)); orders.add(order)
     seen, numbers, orders, records = set(), set(), set(), []
     for i, f in enumerate(data['features'], 1):
         if not isinstance(f, dict) or f.get('type') != 'Feature' or not isinstance(f.get('properties'), dict):
@@ -55,6 +68,8 @@ def validate_geojson(data):
         if (zone,n) in numbers or (zone,order) in orders:
             raise CommandError(f'{code}: повтор номера или порядка места в зоне')
         row = identity(pr.get('row_id'), f'{code}, row_id')
+        appearance = pr.get('appearance',{})
+        validate_appearance(appearance)
         g = f.get('geometry')
         try:
             if not isinstance(g, dict) or g.get('type') != 'Polygon': raise ValueError('нужен Polygon')
@@ -69,7 +84,7 @@ def validate_geojson(data):
             if not polygon.is_valid or polygon.is_empty or polygon.area < 1e-14: raise ValueError('некорректный полигон')
         except (TypeError, KeyError, ValueError, IndexError) as exc:
             raise CommandError(f'{code}: некорректная геометрия ({exc})') from exc
-        seen.add(code); numbers.add((zone,n)); orders.add((zone,order)); records.append((code,zone,n,order,row,g))
+        seen.add(code); numbers.add((zone,n)); orders.add((zone,order)); records.append((code,zone,n,order,row,g,appearance))
     return zones, records
 
 

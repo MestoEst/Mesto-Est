@@ -1,0 +1,541 @@
+[
+  {
+    "id": "z65:1",
+    "row_id": "row-133",
+    "center": [
+      27.662732,
+      53.95761
+    ],
+    "old_angle": 0,
+    "new_angle": 297.2,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z65:2",
+    "row_id": "row-134",
+    "center": [
+      27.662767,
+      53.95757
+    ],
+    "old_angle": 0,
+    "new_angle": 297.2,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z65:3",
+    "row_id": "row-135",
+    "center": [
+      27.662778,
+      53.957526
+    ],
+    "old_angle": 0,
+    "new_angle": 297.2,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z65:0",
+    "row_id": "row-132",
+    "center": [
+      27.662887,
+      53.957288
+    ],
+    "old_angle": 0,
+    "new_angle": 85.9,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z53:1",
+    "row_id": "row-101",
+    "center": [
+      27.66149,
+      53.956423
+    ],
+    "old_angle": 0,
+    "new_angle": 297.2,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z53:11",
+    "row_id": "row-105",
+    "center": [
+      27.661597,
+      53.956164
+    ],
+    "old_angle": 0,
+    "new_angle": 297.2,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z53:20",
+    "row_id": "row-110",
+    "center": [
+      27.661603,
+      53.956139
+    ],
+    "old_angle": 0,
+    "new_angle": 274.9,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z53:19",
+    "row_id": "row-109",
+    "center": [
+      27.661661,
+      53.955955
+    ],
+    "old_angle": 0,
+    "new_angle": 297.2,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z53:0",
+    "row_id": "row-100",
+    "center": [
+      27.661662,
+      53.955934
+    ],
+    "old_angle": 0,
+    "new_angle": 274.8,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z58:0",
+    "row_id": "row-115",
+    "center": [
+      27.662993,
+      53.956078
+    ],
+    "old_angle": 0,
+    "new_angle": 297.2,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z58:1",
+    "row_id": "row-116",
+    "center": [
+      27.663028,
+      53.956038
+    ],
+    "old_angle": 0,
+    "new_angle": 297.2,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z64:2",
+    "row_id": "row-131",
+    "center": [
+      27.66454,
+      53.955714
+    ],
+    "old_angle": 0,
+    "new_angle": 297.2,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z64:1",
+    "row_id": "row-130",
+    "center": [
+      27.664589,
+      53.955655
+    ],
+    "old_angle": 0,
+    "new_angle": 297.2,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z64:0",
+    "row_id": "row-129",
+    "center": [
+      27.664639,
+      53.955594
+    ],
+    "old_angle": 0,
+    "new_angle": 297.2,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z24:24",
+    "row_id": "row-58",
+    "center": [
+      27.665305,
+      53.954553
+    ],
+    "old_angle": 0,
+    "new_angle": 82,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z24:23",
+    "row_id": "row-57",
+    "center": [
+      27.665271,
+      53.95453
+    ],
+    "old_angle": 0,
+    "new_angle": 80.3,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z24:22",
+    "row_id": "row-56",
+    "center": [
+      27.665326,
+      53.954526
+    ],
+    "old_angle": 0,
+    "new_angle": 77.4,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z24:15",
+    "row_id": "row-53",
+    "center": [
+      27.66534,
+      53.95443
+    ],
+    "old_angle": 0,
+    "new_angle": 72.8,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z24:13",
+    "row_id": "row-51",
+    "center": [
+      27.66541,
+      53.954413
+    ],
+    "old_angle": 0,
+    "new_angle": 81.8,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z24:14",
+    "row_id": "row-52",
+    "center": [
+      27.665369,
+      53.954401
+    ],
+    "old_angle": 0,
+    "new_angle": 80.5,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z24:10",
+    "row_id": "row-48",
+    "center": [
+      27.665442,
+      53.954392
+    ],
+    "old_angle": 0,
+    "new_angle": 297.2,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z24:12",
+    "row_id": "row-50",
+    "center": [
+      27.665399,
+      53.954369
+    ],
+    "old_angle": 0,
+    "new_angle": 81.8,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z24:11",
+    "row_id": "row-49",
+    "center": [
+      27.665477,
+      53.954352
+    ],
+    "old_angle": 0,
+    "new_angle": 297.2,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z24:8",
+    "row_id": "row-46",
+    "center": [
+      27.665453,
+      53.954323
+    ],
+    "old_angle": 0,
+    "new_angle": 274.7,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z24:9",
+    "row_id": "row-47",
+    "center": [
+      27.665527,
+      53.954318
+    ],
+    "old_angle": 0,
+    "new_angle": 74.2,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z24:4",
+    "row_id": "row-44",
+    "center": [
+      27.665537,
+      53.954206
+    ],
+    "old_angle": 0,
+    "new_angle": 321.2,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z24:3",
+    "row_id": "row-43",
+    "center": [
+      27.665599,
+      53.9542
+    ],
+    "old_angle": 0,
+    "new_angle": 297.2,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z66:0",
+    "row_id": "row-137",
+    "center": [
+      27.667105,
+      53.95425
+    ],
+    "old_angle": 0,
+    "new_angle": 343.1,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z66:1",
+    "row_id": "row-138",
+    "center": [
+      27.667007,
+      53.954222
+    ],
+    "old_angle": 0,
+    "new_angle": 27.2,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z66:2",
+    "row_id": "row-139",
+    "center": [
+      27.66691,
+      53.954199
+    ],
+    "old_angle": 0,
+    "new_angle": 27.2,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z1:29",
+    "row_id": "row-1",
+    "center": [
+      27.668091,
+      53.953495
+    ],
+    "old_angle": 0,
+    "new_angle": 297.2,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z63:3",
+    "row_id": "row-127",
+    "center": [
+      27.664337,
+      53.953644
+    ],
+    "old_angle": 0,
+    "new_angle": 297.2,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z63:2",
+    "row_id": "row-126",
+    "center": [
+      27.664513,
+      53.953402
+    ],
+    "old_angle": 0,
+    "new_angle": 297.2,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z63:1",
+    "row_id": "row-125",
+    "center": [
+      27.66452,
+      53.953354
+    ],
+    "old_angle": 0,
+    "new_angle": 87.3,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z63:0",
+    "row_id": "row-124",
+    "center": [
+      27.664516,
+      53.953309
+    ],
+    "old_angle": 0,
+    "new_angle": 87.3,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z62:0",
+    "row_id": "row-123",
+    "center": [
+      27.664442,
+      53.95319
+    ],
+    "old_angle": 0,
+    "new_angle": 320.8,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z18:25",
+    "row_id": "row-31",
+    "center": [
+      27.663992,
+      53.953168
+    ],
+    "old_angle": 0,
+    "new_angle": 86.7,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z18:13",
+    "row_id": "row-26",
+    "center": [
+      27.663991,
+      53.953152
+    ],
+    "old_angle": 0,
+    "new_angle": 297.2,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z18:24",
+    "row_id": "row-30",
+    "center": [
+      27.664272,
+      53.952941
+    ],
+    "old_angle": 0,
+    "new_angle": 297.2,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z21:2",
+    "row_id": "row-38",
+    "center": [
+      27.664893,
+      53.952814
+    ],
+    "old_angle": 0,
+    "new_angle": 297.2,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z21:1",
+    "row_id": "row-37",
+    "center": [
+      27.664939,
+      53.952806
+    ],
+    "old_angle": 0,
+    "new_angle": 342,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z21:0",
+    "row_id": "row-36",
+    "center": [
+      27.664986,
+      53.952797
+    ],
+    "old_angle": 0,
+    "new_angle": 297.2,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z16:17",
+    "row_id": "row-23",
+    "center": [
+      27.665357,
+      53.952407
+    ],
+    "old_angle": 0,
+    "new_angle": 297.2,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z16:2",
+    "row_id": "row-21",
+    "center": [
+      27.66538,
+      53.9524
+    ],
+    "old_angle": 0,
+    "new_angle": 328.4,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z16:20",
+    "row_id": "row-121",
+    "center": [
+      27.665855,
+      53.952186
+    ],
+    "old_angle": 0,
+    "new_angle": 297.2,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z16:18",
+    "row_id": "row-119",
+    "center": [
+      27.665925,
+      53.95216
+    ],
+    "old_angle": 0,
+    "new_angle": 328.7,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z16:19",
+    "row_id": "row-120",
+    "center": [
+      27.665991,
+      53.952136
+    ],
+    "old_angle": 0,
+    "new_angle": 328.7,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z15:7",
+    "row_id": "row-19",
+    "center": [
+      27.667464,
+      53.95224
+    ],
+    "old_angle": 0,
+    "new_angle": 27.2,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  },
+  {
+    "id": "z15:6",
+    "row_id": "row-18",
+    "center": [
+      27.667394,
+      53.952219
+    ],
+    "old_angle": 0,
+    "new_angle": 27.2,
+    "reason": "single-bay row used a synthetic horizontal endpoint instead of its explicit angle"
+  }
+]

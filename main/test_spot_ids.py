@@ -45,7 +45,7 @@ class CanonicalSpotsTests(TestCase):
         for f in api['features']:
             source=expected[f['properties']['id']]
             self.assertEqual(f['geometry'],source['geometry'])
-            for field in ['zone','display_number','display_order','row_id']:self.assertEqual(f['properties'][field],source['properties'][field])
+            for field in ['zone','display_number','display_order','row_id','appearance']:self.assertEqual(f['properties'][field],source['properties'][field])
             self.assertIsNone(f['properties']['is_occupied'])
         call_command('import_spots',self.write(api));self.assertEqual(ParkingSpot.objects.count(),734)
 
@@ -127,3 +127,21 @@ class CanonicalSpotsTests(TestCase):
         with self.assertRaises(CommandError):call_command('import_spots',ROOT/'main/data/archive/spots-satellite-original.geojson')
         with self.assertRaises(CommandError):call_command('remap_spot_codes',ROOT/'docs/spot-ids/archive/code-map-confirmed.csv')
         self.assertEqual(ParkingSpot.objects.count(),0)
+
+    def test_geometry_corrections_preserve_ids_centers_and_dimensions(self):
+        import math
+        from shapely.geometry import Polygon
+        corrections=json.loads((ROOT/'docs/spot-ids/geometry-corrections.json').read_text())
+        baseline={b['id']:b for b in json.loads((ROOT/'docs/spot-ids/archive/frontend-baseline.json').read_text())}
+        features={f['properties']['id']:f for f in self.data['features']}
+        self.assertEqual(len(corrections),49)
+        self.assertEqual(set(features),set(baseline))
+        for change in corrections:
+            b=baseline[change['id']];ring=features[change['id']]['geometry']['coordinates'][0]
+            center=[sum(p[j] for p in ring[:-1])/4 for j in (0,1)]
+            for j in (0,1):self.assertAlmostEqual(center[j],b['c'][j],places=12)
+            def meters(points):return [((p[0]-b['c'][0])*65450,(p[1]-b['c'][1])*111320) for p in points]
+            current=meters(ring);previous=meters(b['poly'])
+            self.assertAlmostEqual(Polygon(current).area,Polygon(previous).area/.92,places=7)
+            angle=math.degrees(math.atan2(current[1][1]-current[0][1],current[1][0]-current[0][0]))
+            self.assertLess(abs((angle-change['new_angle']+180)%360-180),1e-7)

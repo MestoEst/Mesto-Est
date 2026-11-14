@@ -2,7 +2,10 @@
   "private": true,
   "scripts": {
     "test": "node tests/spot_ids.test.cjs",
-    "test:browser": "node tests/browser_spots.cjs"
+    "test:browser": "node tests/browser_spots.cjs",
+    "test:appearance": "node tests/browser_main_appearance.cjs"
   },
-  "devDependencies": {"playwright": "1.62.1"}
+  "devDependencies": {
+    "playwright": "1.62.1"
+  }
 }

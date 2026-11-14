@@ -19,13 +19,16 @@ function shift(z,t){
   state.marks.forEach(function(m){ if(m.zone !== z.id || m.day !== t.day) return; s += Math.exp(-Math.abs(t.hour - m.hour) * 60 / 30) * (m.kind === 'busy' ? -0.2 : 0.2); });
   return s;
 }
-function frac(z,t){
-  var counts=SPOTS.counts(z);return counts.free/z.spots;
+/* Original main appearance is an estimate; only explicit API/POST values are observations. */
+function estimateFraction(z,t){
+  t=t||T();var u=z.usual && z.usual[t.day] && z.usual[t.day][t.hour];
+  return clamp((u!=null ? u/100 : 1-load(z,t))+shift(z,t),.02,.98);
 }
-function freeEst(z,t){ return 0; } // replaced by SPOTS after scripts load
-function pct(z,t){ return Math.round(frac(z,t)*100); }
-function level(z){ var c=frac(z);return c>=.6?'hi':c>=.35?'mid':'lo'; }
-function lvlText(z){var c=SPOTS.counts(z);return c.busy+' занято, '+c.unknown+' неизвестно';}
+function frac(z,t){return estimateFraction(z,t);}
+function freeEst(z,t){return 0;} // SPOTS supplies the presentation count after loading.
+function pct(z,t){return Math.round(frac(z,t)*100);}
+function level(z){var c=frac(z);return c>=.6?'hi':c>=.35?'mid':'lo';}
+function lvlText(z){var l=level(z);return l==='hi'?'Места есть':l==='mid'?'Придётся поискать':'Почти нет мест';}
 function perim(){ return DISTRICT.zones.filter(function(z){ return z.type === 'perimeter'; }); }
 function allListings(){ return state.mine.concat(DISTRICT.listings); }
 function listing(id){ return allListings().filter(function(l){ return l.id === id; })[0]; }

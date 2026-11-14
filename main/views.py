@@ -159,6 +159,7 @@ def spots_geojson(request):
                 "display_number": s.display_number,
                 "display_order": s.display_order,
                 "row_id": s.row_id,
+                "appearance": s.appearance,
                 "code": s.code,
                 "block": s.block,
                 "is_occupied": s.is_occupied,
@@ -167,7 +168,7 @@ def spots_geojson(request):
             },
         })
     zones = [{"id":z.code,"name":z.name,"display_number":z.display_number,
-              "display_order":z.display_order,"street_id":z.street_id,"street_name":z.street_name}
+              "display_order":z.display_order,"street_id":z.street_id,"street_name":z.street_name,"appearance":z.appearance}
              for z in ParkingZone.objects.order_by("display_order", "code")]
     return JsonResponse({"type":"FeatureCollection", "dataset":DATASET,"zones":zones,"features":features})
 

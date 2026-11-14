@@ -9,6 +9,7 @@ class ParkingZone(models.Model):
     display_order = models.PositiveIntegerField()
     street_id = models.CharField(max_length=50)
     street_name = models.CharField(max_length=100)
+    appearance = models.JSONField(default=dict, blank=True)
 
 
 class SpotIdentity(models.Model):
@@ -25,6 +26,7 @@ class ParkingSpot(models.Model):
     display_number = models.PositiveIntegerField(null=True, blank=True)
     display_order = models.PositiveIntegerField(default=0)
     row_id = models.CharField(max_length=50, blank=True)
+    appearance = models.JSONField(default=dict, blank=True)
     block = models.CharField(max_length=50, blank=True)
     geometry = models.JSONField()
     is_occupied = models.BooleanField(null=True)

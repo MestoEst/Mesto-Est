@@ -23,7 +23,7 @@ function applyCanonical(data){
   var zones={},ids={},numbers={},orders={},list=[];
   data.zones.forEach(function(p){
     if(!p.id || zones[p.id] || !Number.isInteger(p.display_order)) throw new Error('Некорректные зоны API');
-    zones[p.id]={id:p.id,name:'Зона '+p.display_number,title:p.name,num:p.display_number,displayOrder:p.display_order,street:p.street_id,streetName:p.street_name,label:p.street_name+', зона '+p.display_number,type:'perimeter',bays:[],bc:[],rl:[],rank:[],profile:'home',j:0};
+    zones[p.id]={id:p.id,name:'Зона '+p.display_number,title:p.name,num:p.display_number,displayOrder:p.display_order,street:p.street_id,streetName:p.street_name,label:p.street_name+', зона '+p.display_number,type:'perimeter',bays:[],bc:[],rl:[],rank:[],profile:(p.appearance||{}).profile||'home',j:(p.appearance||{}).offset||0};
   });
   data.features.forEach(function(f){
     var p=f.properties||{},z=zones[p.zone],g=f.geometry;
@@ -33,7 +33,7 @@ function applyCanonical(data){
     numbers[nk]=orders[ok]=true;ids[p.id]=true;
     var poly=displayPolygon(g.coordinates[0]),c=[0,0],n=poly.length-1;
     poly.slice(0,n).forEach(function(q){c[0]+=q[0]/n;c[1]+=q[1]/n;});
-    z.bays.push({id:p.id,zone:p.zone,num:p.display_number,displayOrder:p.display_order,rowId:p.row_id,geometry:g,poly:poly,c:c,isOccupied:p.is_occupied,usualFreePercent:p.usual_free_percent});
+    z.bays.push({id:p.id,zone:p.zone,num:p.display_number,displayOrder:p.display_order,rowId:p.row_id,appearance:p.appearance||{},geometry:g,poly:poly,c:c,isOccupied:p.is_occupied,usualFreePercent:p.usual_free_percent});
   });
   var streets={};
   Object.keys(zones).map(function(id){return zones[id];}).filter(function(z){return z.bays.length;}).sort(function(a,b){return a.displayOrder-b.displayOrder||a.id.localeCompare(b.id);}).forEach(function(z){
@@ -41,7 +41,7 @@ function applyCanonical(data){
     z.bc=z.bays.map(function(b){return b.c;});z.line=z.bc;z.spots=z.bays.length;z.c=[0,0];
     z.bc.forEach(function(c){z.c[0]+=c[0]/z.spots;z.c[1]+=c[1]/z.spots;});
     var rows={};z.bays.forEach(function(b,k){(rows[b.rowId] = rows[b.rowId]||[]).push(b);z.rank[k]=k;});
-    Object.keys(rows).forEach(function(id){var bs=rows[id],a=bs[0].c,b=bs[bs.length-1].c;if(bs.length===1)b=[a[0]+.00001,a[1]];var ring=bs[0].geometry.coordinates[0],depth=Math.hypot((ring[2][0]-ring[1][0])*MX,(ring[2][1]-ring[1][1])*MY);z.rl.push({seg:[a,b],wd:Math.max(.7,depth/5)});});
+    Object.keys(rows).forEach(function(id){var bs=rows[id],a=bs[0].c,b=bs[bs.length-1].c;var ring=bs[0].geometry.coordinates[0];if(bs.length===1){var dx=ring[1][0]-ring[0][0],dy=ring[1][1]-ring[0][1];b=[a[0]+dx*.1,a[1]+dy*.1];}var depth=Math.hypot((ring[2][0]-ring[1][0])*MX,(ring[2][1]-ring[1][1])*MY);z.rl.push({seg:[a,b],wd:Math.max(.7,depth/5)});});
     if(!streets[z.street])streets[z.street]={id:z.street,name:z.streetName,zones:[],spots:0,bc:[],c:[0,0]};
     var st=streets[z.street];st.zones.push(z.id);st.spots+=z.spots;st.bc=st.bc.concat(z.bc);list.push(z);
   });

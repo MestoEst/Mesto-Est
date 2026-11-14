@@ -5,7 +5,7 @@
         номера мест, подписи зон и улиц, демо-движение машин.
    Если Leaflet не загрузился, слой 2 не включается, а слой 1 (ряд мест в панели) продолжает работать.
 
-   Статусы приходят из API: true/false/null; неизвестные не получают машинку. */
+   Подтверждённые статусы приходят из API. Для null используется прежнее оценочное оформление main; оно не записывается в базу. */
 var SPOTS = (function(){
   var MIN_ZOOM = 18, NUM_ZOOM = 19.5, ZONE_ZOOM = 17.5, GAP_M = 0.43;
   var BODY = [['#1d211b', '#2a2f27'], ['#f2f2ed', '#e1e1da'], ['#a9aea4', '#bfc3b9'], ['#2e4259', '#3b536f'], ['#6f3039', '#843d48'], ['#c9ccc4', '#d9dcd4']];
@@ -72,16 +72,22 @@ var SPOTS = (function(){
 
   /* ---------- состояние: свободно или занято ---------- */
   function over(z,k){ return state.over[key(z,k)]; }
-  function isFree(z,k,t){
-    if(t || state.mapFc) return null;  // no invented forecasts
+  function confirmedFree(z,k){
     var o=over(z,k),busy=o ? o.busy : z.bays[k].isOccupied;
-    return busy == null ? null : !busy;
+    return busy==null ? null : !busy;
+  }
+  function isEstimate(z,k,t){return !!t || state.mapFc || confirmedFree(z,k)===null;}
+  function isFree(z,k,t){
+    if(!t && !state.mapFc){var actual=confirmedFree(z,k);if(actual!==null)return actual;}
+    var score=z.bays[k].appearance.score;
+    if(typeof score!=='number')score=hash('estimate:'+key(z,k));
+    return score < Math.round(z.spots*estimateFraction(z,t))/z.spots;
   }
   function counts(z){
     var result={free:0,busy:0,unknown:0};
-    z.bays.forEach(function(b,k){var f=isFree(z,k);result[f===true?'free':f===false?'busy':'unknown']++;});return result;
+    z.bays.forEach(function(b,k){var f=confirmedFree(z,k);result[f===true?'free':f===false?'busy':'unknown']++;});return result;
   }
-  freeEst=function(z){return counts(z).free;};
+  freeEst=function(z,t){return z.bays.reduce(function(n,b,k){return n+(isFree(z,k,t)?1:0);},0);};
   function setBay(z,k,busy,by){
     var cur=isFree(z,k);
     state.over[key(z,k)]={busy:busy==null?null:!!busy,by:by||'user',at:Date.now()};
@@ -97,7 +103,7 @@ var SPOTS = (function(){
     var h = '<div class="strip" id="'+(o.id || 'strip')+'" role="group" aria-label="Места зоны: нажмите, чтобы выбрать">';
     z.bays.forEach(function(b, k){
       var free = isFree(z, k), sel = cur === b.id, ls = showRent && listingAt(z.id, k);
-      h += '<button type="button" class="bay '+(free === true ? 'free' : free === false ? 'busy' : 'unknown')+(sel ? ' sel' : '')+(ls ? ' rent' : '')+'"'+A(action,b.id)+' aria-pressed="'+sel+'" aria-label="Место №'+z.bays[k].num+', '+(free === true ? 'свободно' : free === false ? 'занято' : 'статус неизвестен')+(ls ? ', сдаётся' : '')+'">' +
+      h += '<button type="button" class="bay '+(free === true ? 'free' : free === false ? 'busy' : 'unknown')+(sel ? ' sel' : '')+(ls ? ' rent' : '')+'"'+A(action,b.id)+' aria-pressed="'+sel+'" aria-label="Место №'+z.bays[k].num+', '+(free === true ? 'свободно' : free === false ? 'занято' : 'статус неизвестен')+(isEstimate(z,k)?', оценка':'')+(ls ? ', сдаётся' : '')+'">' +
         (free !== false ? '' : '<span class="car">'+carSVG(variant(z, k), '100%', '100%')+'</span>') + '<i>'+z.bays[k].num+'</i>' + (ls ? '<u>Br</u>' : '') + '</button>';
     });
     return h + '</div>';
@@ -105,7 +111,7 @@ var SPOTS = (function(){
   function spotRow(z){
     if(state.spot == null || !z.bays.some(function(b){return b.id===state.spot;})) return '<div class="dockhint spotnote h-mob">Нажмите на место в ряду: покажем номер и можно отметить именно его.</div>';
     var k = z.bays.findIndex(function(b){return b.id===state.spot;}), free = isFree(z, k), ls = listingAt(z.id, k);
-    return '<div class="spotrow"><div class="sn">№'+z.bays[k].num+'</div><div class="sb"><b>'+(free === true ? 'Свободно' : free === false ? 'Занято' : 'Статус неизвестен')+'</b><span>'+esc(z.label)+'</span></div>' +
+    return '<div class="spotrow"><div class="sn">№'+z.bays[k].num+'</div><div class="sb"><b>'+(free === true ? 'Свободно' : free === false ? 'Занято' : 'Статус неизвестен')+(isEstimate(z,k)?' (оценка)':'')+'</b><span>'+esc(z.label)+'</span></div>' +
       (ls ? '<button type="button" class="chip lime"'+A('book', ls.id)+'>Арендовать</button>' : '') + '</div>';
   }
 
@@ -263,7 +269,7 @@ var SPOTS = (function(){
   }
 
   return {
-    id:key, counts:counts, isFree:isFree, setBay:setBay, strip:strip, spotRow:spotRow, listingAt:listingAt, carSVG:carSVG, variant:variant,
+    id:key, counts:counts, confirmedFree:confirmedFree, isEstimate:isEstimate, isFree:isFree, setBay:setBay, strip:strip, spotRow:spotRow, listingAt:listingAt, carSVG:carSVG, variant:variant,
     attach:attach, start:start, colors:colors, sync:sync, onZoom:onZoom, themeChanged:themeChanged, updateSel:updateSel, bayStyle:bayStyle, slotLatLngs:slotLatLngs, info:info,
     streetPills:streetPills, ppm:function(){ return map ? ppm() : 1; }, nearZoom:function(){ return !!map && map.getZoom() >= MIN_ZOOM; }
   };

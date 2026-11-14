@@ -14,6 +14,8 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
   assert.equal(await page.evaluate(()=>SPOT_DATA.legacyAvailable),true);
   const downloading=page.waitForEvent('download');await page.getByRole('button',{name:'Экспортировать',exact:true}).click();
   const downloaded=await downloading;assert.equal(fs.readFileSync(await downloaded.path(),'utf8'),'[{"legacy":"do not display"}]');
+  assert.ok(await page.locator('#strip .bay.free').count()>0);assert.ok(await page.locator('#strip .bay.busy .car').count()>0);
+  assert.equal(await page.locator('#strip .bay.unknown').count(),0);
   const ids=await page.evaluate(()=>zone(state.sel).bays.slice(0,3).map(b=>b.id));
   await page.locator('#strip [data-a="spot"]').first().click();
   assert.equal(await page.evaluate(()=>state.spot),ids[0]);
@@ -36,7 +38,7 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
   await page.locator('#strip [data-a="spot"]').nth(1).click();
   await page.route('**/api/spots/*/status/',r=>r.fulfill({status:500,contentType:'application/json',body:'{"error":"test failure"}'}));
   await page.locator('[data-a="mark"][data-v="busy"]').click();await page.waitForFunction(()=>!API.spotPending&&state.last===null);
-  assert.equal(await page.evaluate(()=>SPOTS.isFree(zone(state.sel),1)),null);await page.unroute('**/api/spots/*/status/');
+  assert.equal(await page.evaluate(()=>SPOTS.confirmedFree(zone(state.sel),1)),null);await page.unroute('**/api/spots/*/status/');
   // Zonal mark must neither POST a spot nor overwrite individual statuses.
   await page.locator('#strip [data-a="spot"]').nth(1).click();let spotPosts=0;
   page.on('request',r=>{if(r.method()==='POST'&&r.url().includes('/api/spots/'))spotPosts++;});

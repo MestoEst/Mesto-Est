@@ -9,10 +9,13 @@ c.applyCanonical(data);assert.equal(c.ZS.length,66);assert.equal(c.ZS.reduce((n,
 const snapshot=()=>new Map(c.ZS.flatMap(z=>z.bays.map(b=>[b.id,{zone:z.id,num:b.num,order:b.displayOrder,geometry:JSON.stringify(b.geometry)}])));
 const before=snapshot(),reordered=JSON.parse(JSON.stringify(data));reordered.features.reverse();reordered.zones.reverse();c.applyCanonical(reordered);assert.deepEqual(snapshot(),before);
 const baseline=JSON.parse(fs.readFileSync('docs/spot-ids/archive/frontend-baseline.json'));
+const corrections=new Map(JSON.parse(fs.readFileSync('docs/spot-ids/geometry-corrections.json')).map(r=>[r.id,r]));
 const current=new Map(c.ZS.flatMap(z=>z.bays.map(b=>[b.id,b])));
 for(const b of baseline){
  const now=current.get(b.id);assert.ok(now);
- now.poly.forEach((p,i)=>p.forEach((v,j)=>assert.ok(Math.abs(v-b.poly[i][j])<1e-12,`Display shape ${b.id}`)));
+ const correction=corrections.get(b.id),angle=correction ? correction.new_angle*Math.PI/180 : 0;
+ const expected=b.poly.map(p=>{const x=(p[0]-b.c[0])*65450,y=(p[1]-b.c[1])*111320;return [b.c[0]+(Math.cos(angle)*x-Math.sin(angle)*y)/65450,b.c[1]+(Math.sin(angle)*x+Math.cos(angle)*y)/111320];});
+ now.poly.forEach((p,i)=>p.forEach((v,j)=>assert.ok(Math.abs(v-expected[i][j])<1e-12,`Display shape ${b.id}`)));
  now.c.forEach((v,j)=>assert.ok(Math.abs(v-b.c[j])<1e-12));
  assert.notEqual(JSON.stringify(now.geometry.coordinates[0]),JSON.stringify(now.poly),'Physical boundary is separate from paint inset');
 }
@@ -24,10 +27,12 @@ assert.equal(snapshot().get(id).zone,changed.zones.at(-1).id);assert.equal(snaps
 for(const [key,v]of before)if(key!==id)assert.deepEqual(snapshot().get(key),v);
 const invalid=JSON.parse(JSON.stringify(data));invalid.features.at(-1).properties.id=invalid.features[0].properties.id;
 const lastGood=snapshot();assert.throws(()=>c.applyCanonical(invalid),/место/);assert.deepEqual(snapshot(),lastGood);
-c.applyCanonical(data);Object.assign(c,{state:{mapFc:false,over:{},spot:null},document:{addEventListener:()=>{}},freeEst:()=>0,clamp:(n,a,b)=>Math.max(a,Math.min(b,n))});
+c.applyCanonical(data);Object.assign(c,{state:{mapFc:false,over:{},spot:null},document:{addEventListener:()=>{}},freeEst:()=>0,estimateFraction:()=>.5,clamp:(n,a,b)=>Math.max(a,Math.min(b,n))});
 vm.runInContext(fs.readFileSync('static/js/features/map/spots.js','utf8'),c);
 const z=c.ZS.find(z=>z.bays.length>=3),selected=z.bays[0].id,neighbor=z.bays[1].id;
 assert.equal(c.SPOTS.counts(z).unknown,z.bays.length);assert.equal(c.SPOTS.counts(z).free,0);
+assert.ok(z.bays.some((b,k)=>c.SPOTS.isFree(z,k)));assert.ok(z.bays.some((b,k)=>!c.SPOTS.isFree(z,k)));
+assert.ok(c.freeEst(z)>0);assert.equal(c.SPOTS.confirmedFree(z,0),null);
 c.SPOTS.setBay(z,0,true,'user');assert.equal(c.state.over[selected].busy,true);assert.equal(c.state.over[neighbor],undefined);
 assert.equal(c.SPOTS.counts(z).busy,1);assert.equal(c.SPOTS.counts(z).unknown,z.bays.length-1);
 c.SPOTS.setBay(z,1,false,'user');assert.equal(c.SPOTS.counts(z).free,1);
