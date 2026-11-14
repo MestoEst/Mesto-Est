@@ -4,11 +4,12 @@ import sys
 import json
 import tempfile
 import sqlite3
+from contextlib import closing, ExitStack
 from pathlib import Path
 ROOT=Path(__file__).resolve().parent.parent
 sys.path.insert(0,str(ROOT))
 os.environ['DJANGO_SETTINGS_MODULE']='MestoEst.settings'
-with tempfile.TemporaryDirectory() as temp:
+with tempfile.TemporaryDirectory() as temp, ExitStack() as database_connections:
     database=Path(temp)/'rehearsal.sqlite3'
     os.environ['MESTO_DB_PATH']=str(database)
     import django
@@ -17,7 +18,9 @@ with tempfile.TemporaryDirectory() as temp:
     from django.core.management.base import CommandError
     from django.contrib.auth import get_user_model
     from django.utils import timezone
-    from django.db import models,connection
+    from django.db import models,connection,connections
+    # Close even on assertion/error, before TemporaryDirectory removes SQLite files.
+    database_connections.callback(connections.close_all)
     from main.models import ParkingSpot,SpotObservation,SpotHourStat,UserProfile
     from main.spot_identity import DATASET
     call_command('migrate',verbosity=0)
@@ -44,7 +47,7 @@ with tempfile.TemporaryDirectory() as temp:
     import subprocess
     schema_backup=Path(temp)/'before-schema.sqlite3'
     subprocess.run([sys.executable,str(ROOT/'tools/backup_sqlite.py'),'--source',str(database),'--output',str(schema_backup)],check=True)
-    with sqlite3.connect(schema_backup) as db:
+    with closing(sqlite3.connect(schema_backup)) as db:
         assert 'dataset' not in [r[1] for r in db.execute('PRAGMA table_info(main_parkingspot)')]
     call_command('migrate',verbosity=0)
     assert ParkingSpot.objects.filter(dataset='legacy',is_active=True).count()==735
@@ -68,7 +71,7 @@ with tempfile.TemporaryDirectory() as temp:
     booking.delete()
     backup=Path(temp)/'before-switch.sqlite3'
     call_command('transition_spots',canonical_path,backup=str(backup))
-    with sqlite3.connect(backup) as db:
+    with closing(sqlite3.connect(backup)) as db:
         assert db.execute('PRAGMA integrity_check').fetchone()[0]=='ok'
         assert db.execute('select count(*) from main_parkingspot').fetchone()[0]==735
         assert db.execute('select count(*) from auth_user').fetchone()[0]==1
