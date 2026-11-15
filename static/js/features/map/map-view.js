@@ -12,7 +12,7 @@ if(slot) slot.innerHTML = '<div class="mapph"><div><b>Здесь будет ка
 function mapPart(){ return '<div id="legendwrap">' + legend() + '</div>'; }
 function legend(){
   if(state.layer !== 'places') return '';
-  return '<div class="legend"><span><i style="background:#C9F54E"></i>Свободно</span><span><i class="lg-car"></i>Занято, на месте машина</span><span>Без отметки — оценочное отображение</span><span>Номер места и машинки видны при приближении</span></div>';
+  return '<div class="legend"><span><i style="background:var(--lime)"></i>Свободно</span><span><i class="lg-car"></i>Занято, на месте машина</span><span>Без отметки — оценочное отображение</span><span>Номер места и машинки видны при приближении</span></div>';
 }
 
 var DEMO = true;   /* демо: отмечать можно без GPS. В боевой версии поставить false */
@@ -42,7 +42,7 @@ function dock(){
   var last = state.marks.filter(function(m){ return m.zone === z.id; }).slice(-1)[0];
   var can = live && canMark(z), st = street(z.street), k = z.bays.findIndex(function(b){return b.id===state.spot;}); if(k<0) k=null;
   var h = '<section class="dock"><div class="rowi"><span class="ico">'+ic('pin')+'</span><div class="rt"><small>'+esc(st ? st.name : 'Район')+'</small><b>'+esc(z.name)+'</b></div><span class="pill" title="При отсутствии отметок показана оценка, а не подтверждённый статус">шанс '+pct(z)+'%</span></div>' +
-    '<div class="stat"><div class="big">≈'+freeEst(z)+'</div><div class="bt"><b>из '+z.spots+' мест свободно</b><span>'+lvlText(z)+'</span></div></div><div class="tagrow'+(live ? ' live' : '')+'" style="margin:2px 2px 0">'+tag+'</div>' +
+    '<div class="stat"><div class="big">'+(state.mapFc ? '≈' : '')+freeEst(z)+'</div><div class="bt"><b>из '+z.spots+' мест свободно</b><span>'+lvlText(z)+'</span></div></div><div class="tagrow'+(live ? ' live' : '')+'" style="margin:2px 2px 0">'+tag+'</div>' +
     SPOTS.strip(z) + SPOTS.spotRow(z);
   if(can){
     h += '<div class="markfor">Отметить: <b>'+(k != null ? 'место №'+z.bays[k].num : 'всю зону')+'</b></div>' +
@@ -74,12 +74,20 @@ function moreHtml(){
     list.map(function(z){ return '<li><button type="button"'+A('zlist',z.id)+'><span>'+esc(z.label)+'</span><span class="ct">≈'+freeEst(z)+' · '+pct(z)+'%</span></button></li>'; }).join('') + '</ul></div>' + mapPart();
 }
 function legacyLayoutNotice(){return SPOT_DATA.legacyAvailable ? '<div class="dockhint">В браузере есть старая разметка. Она не применяется к новой карте. <button type="button"'+A('export-legacy')+'>Экспортировать</button></div>' : '';}
+/* режим «выбрать место на карте»: открывается из «Сдать» и из блока «Я владелец места» */
+function pickBar(){
+  if(!state.pick) return '';
+  var z = zone(state.sel), k = z ? z.bays.findIndex(function(b){return b.id===state.spot;}) : -1;
+  var cur = k >= 0 ? 'Выбрано: '+esc(z.name)+', место №'+z.bays[k].num : 'Нажмите на своё место на карте или в ряду мест';
+  return '<div class="pickbar" role="status"><div class="pt"><b>'+(state.pick === 'offer' ? 'Какое место сдаёте?' : 'Где ваше место?')+'</b><span>'+cur+'</span></div>' +
+    '<button type="button" class="cta"'+A('pickdone')+(k < 0 ? ' disabled' : '')+'>Готово</button><button type="button" class="cta ghost"'+A('pickcancel')+'>Отмена</button></div>';
+}
 function mapView(){
   if(SPOT_DATA.status!=='ready') return '<section class="card" role="status"><h1>'+ (SPOT_DATA.status==='error'?'Не удалось загрузить парковочные места':'Загружаем парковочные места…')+'</h1><p>'+esc(SPOT_DATA.error)+'</p>'+(SPOT_DATA.status==='error'?'<button type="button" class="cta"'+A('retry-spots')+'>Повторить загрузку</button>':'')+'</section>';
 
   var legacyNotice=legacyLayoutNotice();
   var layers = [['places','Места','pin'],['streets','Улицы','park'],['access','Спецместа','wheel'],['ev','Зарядки','bolt']];
-  return '<div class="stage"><div id="mapslot"></div>' +
+  return '<div class="stage"><div id="mapslot"></div>' + pickBar() +
     '<div class="topbar"><div class="chips" role="group" aria-label="Слои карты">' + (state.edit ? '<span class="chip" style="background:var(--lime);color:#0E100D;border:0">Режим разметки</span>' : layers.map(function(l){ return '<button type="button" class="chip"'+A('layer',l[0])+' aria-pressed="'+(state.layer===l[0])+'">'+ic(l[2])+l[1]+'</button>'; }).join('')) + '</div></div>' +
     (MAP.attach ? '<button type="button" class="locbtn"'+A('locate')+' aria-label="Где я">'+ic('loc',22)+'</button><button type="button" class="locbtn two"'+A('fitall')+' aria-label="Весь район">'+ic('all',22)+'</button>' : '') +
     '<aside class="sheet'+(state.sheetMin ? ' min' : '')+'" aria-label="Панель парковок">' + (state.edit ? '' : '<button type="button" class="grab"'+A('peek')+' aria-label="'+(state.sheetMin ? 'Развернуть панель' : 'Свернуть панель')+'" aria-expanded="'+(!state.sheetMin)+'"><i></i></button>') + '<div id="dockwrap">'+legacyNotice+dock()+'</div>' +
@@ -92,12 +100,22 @@ function refreshMap(){
   if(d) d.innerHTML = legacyLayoutNotice()+dock();
   sc = $('#strip'); if(sc) sc.scrollLeft = left;
   var lg = $('#legendwrap'); if(lg) lg.innerHTML = legend();
+  var pb = $('.pickbar'); if(pb && state.pick){ var t = document.createElement('div'); t.innerHTML = pickBar(); pb.replaceWith(t.firstChild); }
   mapCall('draw');
 }
 function plural(n, a, b, c){ var m = n % 100, d = n % 10; return (m > 10 && m < 20) ? c : (d === 1 ? a : (d > 1 && d < 5 ? b : c)); }
 
 VIEWS.map = mapView;
 
+act('pickmap', function(v){ state.pick = v; state.tab = 'map'; state.layer = 'places'; var z = zone(v === 'offer' ? offer.zone : state.sel); if(z) state.sel = z.id; state.spot = null; render(true); if(z) mapCall('focusZone', z.id); });
+act('pickcancel', function(){ var back = state.pick === 'owner' ? 'account' : 'offer'; state.pick = null; state.tab = back; render(true); });
+act('pickdone', function(){
+  var z = zone(state.sel), b = z && z.bays.filter(function(x){ return x.id === state.spot; })[0];
+  if(!b){ toast('Нажмите на своё место'); return; }
+  var back = state.pick === 'owner' ? 'account' : 'offer';
+  if(state.pick === 'owner') OWN.setPlace(z.street, b.num); else selectOfferBay(z, b.id);
+  state.pick = null; state.tab = back; render(true); toast('Место №'+b.num+' выбрано');
+});
 act('zone', function(v){ state.sel = v; state.spot = null; render(); });
 act('zlist', function(v){ state.sel = v; state.spot = null; state.layer = 'places'; render(); mapCall('focusZone', v); });
 act('street', function(v){ var st = street(v); if(!st) return; state.sel = st.zones[0]; state.spot = null; state.layer = 'places'; render(); mapCall('focusStreet', v); });

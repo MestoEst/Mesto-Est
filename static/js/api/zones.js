@@ -45,6 +45,20 @@
       SPOT_DATA.status='ready';render();
     }).catch(function(e){SPOT_DATA.status='error';SPOT_DATA.error=e.message||'Ошибка связи с сервером';render();});
   };
+  /* тихое обновление статусов: поменяли в админке (или отметил другой человек), цвет на карте сменится сам, без перезагрузки */
+  API.refreshStatuses=function(){
+    if(API.spotPending||document.hidden||state.tab!=='map'||state.edit)return Promise.resolve();
+    return API.get('/api/spots/').then(function(data){
+      if(API.spotPending)return;
+      var changed=false;
+      ((data&&data.features)||[]).forEach(function(f){
+        var p=f.properties||{},it=findBay(p.id||p.code);if(!it)return;
+        var busy=p.is_occupied===true;
+        if((it.b.isOccupied===true)!==busy){it.b.isOccupied=busy;changed=true;}
+      });
+      if(changed)repaint();
+    }).catch(soft);
+  };
   ev('mark',function(d){
     var m=d.mark;if(!m || !m.sp)return;
     sendSpot(m,m.kind==='busy').then(function(){
@@ -65,6 +79,7 @@
   });
   ev('ready',function(){
     API.loadSpots();
+    setInterval(API.refreshStatuses,20000);
     if(on('zones')) loadZones();
     if(on('marks')){ pollMarks(); setInterval(function(){ if(!document.hidden && state.tab === 'map') pollMarks(); }, 30000); }
   });

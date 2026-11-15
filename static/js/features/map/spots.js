@@ -74,7 +74,7 @@ var SPOTS = (function(){
   function over(z,k){ return state.over[key(z,k)]; }
   function confirmedFree(z,k){
     var o=over(z,k),busy=o ? o.busy : z.bays[k].isOccupied;
-    return busy==null ? null : !busy;
+    return busy==null ? true : !busy;   /* нет данных (unknown / null в базе) = свободно: все места по умолчанию зелёные */
   }
   function isEstimate(z,k,t){return !!t || state.mapFc || confirmedFree(z,k)===null;}
   function isFree(z,k,t){

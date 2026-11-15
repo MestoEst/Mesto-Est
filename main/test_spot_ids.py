@@ -46,7 +46,7 @@ class CanonicalSpotsTests(TestCase):
             source=expected[f['properties']['id']]
             self.assertEqual(f['geometry'],source['geometry'])
             for field in ['zone','display_number','display_order','row_id','appearance']:self.assertEqual(f['properties'][field],source['properties'][field])
-            self.assertIsNone(f['properties']['is_occupied'])
+            self.assertFalse(f['properties']['is_occupied'])   # нет данных = свободно
         call_command('import_spots',self.write(api));self.assertEqual(ParkingSpot.objects.count(),734)
 
     def test_move_change_zone_and_add_does_not_change_id_or_history(self):
@@ -118,7 +118,7 @@ class CanonicalSpotsTests(TestCase):
         d=self.small();call_command('import_spots',self.write(d));code=d['features'][0]['properties']['id']
         self.assertEqual(self.client.post(f'/api/spots/{code}/status/',data=json.dumps({'is_occupied':True}),content_type='application/json').status_code,200)
         api=self.client.get('/api/spots/').json();by={f['properties']['id']:f['properties'] for f in api['features']}
-        self.assertTrue(by[code]['is_occupied']);self.assertIsNone(by[d['features'][1]['properties']['id']]['is_occupied'])
+        self.assertTrue(by[code]['is_occupied']);self.assertFalse(by[d['features'][1]['properties']['id']]['is_occupied'])
         spot=ParkingSpot.objects.get(dataset=DATASET,code=code);self.assertEqual(spot.observations.count(),1);self.assertEqual(spot.hour_stats.get().total,1)
         call_command('import_spots',self.write(d));spot.refresh_from_db();self.assertTrue(spot.is_occupied)
         self.assertEqual(self.client.post('/api/spots/absent/status/',data='{"is_occupied":true}',content_type='application/json').status_code,404)

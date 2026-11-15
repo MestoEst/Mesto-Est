@@ -21,7 +21,23 @@ var OWN = (function(){
   function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
   function get(){ if(state.user){ if(!state.user.owner) state.user.owner = fresh(); return state.user.owner; } return draft; }
   function has(o, k){ return o.docs.some(function(d){ return d.kind === k; }); }
-  function complete(o){ return DOC_KINDS.every(function(d){ return !d.need || has(o, d.k); }) && !!String(o.place).trim() && (o.parking !== 'other' || !!String(o.addr).trim()); }
+  /* какие номера мест есть на улице: по данным карты. На «Другом адресе» проверять нечего */
+  function streetNums(id){
+    var st = (typeof street === 'function') ? street(id) : null, nums = [];
+    if(!st || typeof zone !== 'function') return nums;
+    st.zones.forEach(function(zid){ var z = zone(zid); if(z) z.bays.forEach(function(b){ nums.push(Number(b.num)); }); });
+    return nums.sort(function(a, b){ return a - b; });
+  }
+  /* текст ошибки, если такого места на улице нет; пусто, если всё в порядке или проверять нечего */
+  function placeErr(o){
+    var v = String(o.place).trim(), nums;
+    if(!v || o.parking === 'other') return '';
+    nums = streetNums(o.parking);
+    if(!nums.length) return '';
+    if(nums.indexOf(Number(v)) < 0 || !/^\d+$/.test(v)) return 'На этой улице нет места №'+v+'. Номера мест здесь: '+(nums.length > 1 ? 'от '+nums[0]+' до '+nums[nums.length-1] : nums[0])+'.';
+    return '';
+  }
+  function complete(o){ return DOC_KINDS.every(function(d){ return !d.need || has(o, d.k); }) && !!String(o.place).trim() && !placeErr(o) && (o.parking !== 'other' || !!String(o.addr).trim()); }
   function size(n){ return n >= 1048576 ? (n/1048576).toFixed(1).replace('.', ',') + ' МБ' : Math.max(1, Math.round(n/1024)) + ' КБ'; }
   function emit(name, detail){ try { document.dispatchEvent(new CustomEvent('mesto:' + name, {detail:detail})); } catch(err){} }
   /* статус пересчитывается из того, что заполнено; «pending / verified / rejected» ставятся только отправкой и проверкой */
@@ -53,6 +69,8 @@ var OWN = (function(){
       (o.status === 'rejected' ? '<span class="muted sm">'+esc(o.reason || 'Документы не подошли.')+' Исправьте и отправьте снова.</span>' : '') + '</div>';
     h += '<div class="two ownloc"><div><label class="sm muted" for="own-pk">Улица</label><select id="own-pk" data-own="parking"'+dis+'>'+(typeof STREETS !== 'undefined' ? STREETS : []).map(function(st){ return '<option value="'+st.id+'"'+(o.parking===st.id?' selected':'')+'>'+esc(st.name)+'</option>'; }).join('')+'<option value="other"'+(o.parking==='other'?' selected':'')+'>Другой адрес</option></select></div>' +
       '<div><label class="sm muted" for="own-pl">Номер места</label><input id="own-pl" type="text" inputmode="text" data-own="place" placeholder="например, 128" value="'+esc(o.place)+'" autocomplete="off"'+dis+'></div></div>' + (lock ? '<button type="button" class="linkbtn" style="margin-top:8px" data-oa="edit">Изменить данные</button>' : '');
+    h += '<p class="hint bad" id="own-err"'+(placeErr(o) ? '' : ' hidden')+' style="margin-top:8px">'+esc(placeErr(o))+'</p>';
+    if(!lock) h += '<button type="button" class="cta ghost pickbtn" style="margin-top:8px" data-a="pickmap" data-v="owner">'+ic('pin', 18)+' Выбрать на карте</button>';
     if(o.parking === 'other') h += '<div style="margin-top:8px"><label class="sm muted" for="own-ad">Адрес</label><input id="own-ad" type="text" data-own="addr" placeholder="улица, дом" value="'+esc(o.addr)+'" autocomplete="off"'+dis+'></div>';
     h += '<div class="slots">' + DOC_KINDS.map(function(d){ return slot(o, d); }).join('') + '</div>' +
       '<p class="hint" style="margin-top:8px">Фото или PDF, до '+MAX_MB+' МБ. Документы видим только мы, другим пользователям они не показываются.</p>';
@@ -100,7 +118,7 @@ var OWN = (function(){
     else if(a === 'edit'){ o.status = 'draft'; redraw(); }
     else if(a === 'rm'){ var gone = o.docs.filter(function(d){ return d.id === v; })[0]; o.docs = o.docs.filter(function(d){ return d.id !== v; }); touch(o); emit('owner-doc-remove', {id:v, doc:gone, owner:o}); redraw(); }
     else if(a === 'submit'){
-      if(!complete(o)){ toast(!String(o.place).trim() ? 'Укажите номер места' : (o.parking === 'other' && !String(o.addr).trim() ? 'Укажите адрес' : 'Приложите документ на место и технический паспорт')); return; }
+      if(!complete(o)){ toast(!String(o.place).trim() ? 'Укажите номер места' : placeErr(o) ? placeErr(o) : (o.parking === 'other' && !String(o.addr).trim() ? 'Укажите адрес' : 'Приложите документ на место и технический паспорт')); return; }
       var ce = consentCheck('owner', ['privacy']); if(ce){ toast(ce); return; }
       o.status = 'pending'; o.sentAt = stamp(); o.reason = ''; emit('owner-submit', {owner:o}); consentReset('owner'); redraw(); toast('Отправили на проверку');
     }
@@ -122,7 +140,10 @@ var OWN = (function(){
   document.addEventListener('input', function(e){
     var t = e.target, k = t.getAttribute && t.getAttribute('data-own');
     if(k === 'place' || k === 'addr') get()[k] = t.value;
+    if(k === 'place'){ var er = document.getElementById('own-err'), msg = placeErr(get()); if(er){ er.textContent = msg; er.hidden = !msg; } }
   });
 
-  return {card:card, gate:gate, canPublish:canPublish, badge:listingBadge, take:take, go:go, get:get, esc:esc, complete:complete, kinds:DOC_KINDS};
+  /* из режима «выбрать на карте»: улица и номер места */
+  function setPlace(parking, place){ var o = get(); o.on = true; o.parking = parking; o.place = String(place); touch(o); }
+  return {setPlace:setPlace, placeErr:placeErr, card:card, gate:gate, canPublish:canPublish, badge:listingBadge, take:take, go:go, get:get, esc:esc, complete:complete, kinds:DOC_KINDS};
 })();

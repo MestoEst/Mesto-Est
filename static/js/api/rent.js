@@ -36,6 +36,14 @@
       var s = mapListing(j), i = state.mine.indexOf(l); if(i >= 0) state.mine[i] = s; repaint();
     }).catch(function(e){ var i = state.mine.indexOf(l); if(i >= 0) state.mine.splice(i, 1); repaint(); say(e); });
   });
+  /* копия договора с подписью: сервер сохранит её и вышлет на почту из аккаунта (флаг contracts) */
+  ev('book', function(d){
+    if(!on('contracts') || !d.signature) return;
+    var b = d.booking, l = (DISTRICT.listings || []).filter(function(x){ return x.id === String(b.listing); })[0] || {};
+    API.post('/api/contracts/', {booking_ref:b.id, listing:b.listing, title:l.title || 'Парковочное место', place:l.spotNum || '', owner:l.owner || '', when_text:b.when, total:b.total, signature:d.signature}).then(function(j){
+      if(j && j.emailed) toast('Копия договора отправлена на вашу почту');
+    }).catch(say);
+  });
   ev('book', function(d){
     if(!on('bookings')) return;
     var b = d.booking;
