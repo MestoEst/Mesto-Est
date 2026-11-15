@@ -17,7 +17,7 @@ function onInput(id, fn){ INP[id] = fn; }
 function render(top, route){
   var sc = main.scrollTop;
   main.className = state.tab === 'map' ? 'mapmain' : '';
-  main.innerHTML = state.tab === 'map' ? VIEWS.map() : '<div class="narrow' + ((state.tab === 'offer' || state.tab === 'account') ? ' cols' : '') + '">' + VIEWS[state.tab]() + '</div>';
+  main.innerHTML = state.tab === 'map' ? VIEWS.map() : '<div class="narrow' + (state.tab === 'offer' ? ' cols' : '') + (state.tab === 'account' ? ' acc' : '') + '">' + VIEWS[state.tab]() + '</div>';
   main.scrollTop = top ? 0 : sc;
   if(state.tab === 'map') mapAttachOrPlaceholder();
   $('#nav').innerHTML = TABS.map(function(t){ return '<button type="button" role="tab"'+A('tab',t[0])+' aria-selected="'+(state.tab===t[0])+'" aria-label="'+t[1]+'">'+ic(t[2])+'<span>'+t[1]+'</span></button>'; }).join('');
@@ -29,10 +29,14 @@ function render(top, route){
    Приложение по-прежнему одно (состояние: брони, места, пользователь хранится в памяти страницы), поэтому переходы
    между разделами идут без перезагрузки, а адрес в строке меняется. Прямые ссылки и кнопки «назад/вперёд» работают.
    Django отдаёт ту же страницу на все эти адреса (main/urls.py). Работает по умолчанию при открытии через http(s); отключается флагом router: false;
-   при открытии index.html без Django (Live Server, file://) адреса не трогаются. */
+   при открытии index.html без Django (Live Server) стоит router: 'hash' и адреса вида #/map; при file:// адреса не трогаются. */
 var ROUTER = {on:false, tab:null, ready:false, navigated:false};
 var PAGE_TITLES = {map:'Карта', rent:'Аренда', offer:'Сдать место', account:'Аккаунт', login:'Вход', register:'Регистрация'};
 function routerOn(){ return (window.MESTO_CONFIG || {}).router !== false && /^https?:$/.test(location.protocol) && !!(window.history && history.pushState); }
+/* router: true (Django) — адреса вида /map; router: 'hash' (index.html без Django, Live Server) — адреса вида #/map, перезагрузка не даёт 404 */
+function routerHash(){ return (window.MESTO_CONFIG || {}).router === 'hash'; }
+function curPath(){ return (routerHash() ? location.hash.replace(/^#/, '') : location.pathname).replace(/\/+$/, '') || '/'; }
+function urlFor(want){ return routerHash() ? location.pathname + location.search + '#' + want : want + location.search; }
 function pathFor(){
   if(state.tab === 'account') return state.user ? '/account' : (state.authMode === 'login' ? '/login' : '/register');
   if(state.tab === 'docs') return '/docs/' + state.doc;
@@ -47,7 +51,7 @@ function titleFor(){
 }
 /* адрес в строке → состояние приложения */
 function readPath(){
-  var p = location.pathname.replace(/\/+$/, '') || '/', m;
+  var p = curPath(), m;
   state.gate = ''; state.zoneFilter = '';
   if(p === '/login'){ state.tab = 'account'; state.authMode = 'login'; }
   else if(p === '/register'){ state.tab = 'account'; state.authMode = 'new'; }
@@ -61,10 +65,10 @@ function syncUrl(fromRoute){
   if(!ROUTER.on) return;
   document.title = titleFor();
   if(state.tab === 'account' && !ROUTER.ready) return;      /* пока не узнали, вошёл ли человек, адрес аккаунта не меняем */
-  var want = pathFor(), cur = location.pathname.replace(/\/+$/, '') || '/';
+  var want = pathFor(), cur = curPath();
   if(cur !== want){
-    if(!fromRoute && ROUTER.tab !== state.tab){ history.pushState(null, '', want + location.search); ROUTER.navigated = true; }
-    else history.replaceState(null, '', want + location.search);
+    if(!fromRoute && ROUTER.tab !== state.tab){ history.pushState(null, '', urlFor(want)); ROUTER.navigated = true; }
+    else history.replaceState(null, '', urlFor(want));
   }
   ROUTER.tab = state.tab;
 }

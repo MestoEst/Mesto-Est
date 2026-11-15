@@ -60,6 +60,7 @@ function whereHtml(){
   var o = offer, st = street(o.street), z = zone(o.zone);
   var h = '<div class="two"><div><label class="sm muted" for="of-st">Улица</label><select id="of-st">' + STREETS.map(function(s){ return '<option value="'+s.id+'"'+(s.id === o.street ? ' selected' : '')+'>'+esc(s.name)+'</option>'; }).join('') + '</select></div>' +
     '<div><label class="sm muted" for="of-zn">Зона</label><select id="of-zn">' + st.zones.map(function(id){ var q = zone(id); return '<option value="'+id+'"'+(id === o.zone ? ' selected' : '')+'>'+esc(q.name)+' · '+q.spots+' '+plural(q.spots, 'место', 'места', 'мест')+'</option>'; }).join('') + '</select></div></div>' +
+    '<button type="button" class="cta ghost pickbtn"'+A('pickmap','offer')+'>'+ic('pin', 18)+' Выбрать на карте</button>' +
     '<div class="sm muted" style="margin:12px 0 6px">Номер места: нажмите на своё</div>' + SPOTS.strip(z, {act:'opick', sel:o.spotId, id:'ostrip', rent:false}) +
     '<div class="spotrow"><div class="sn">№'+o.spot+'</div><div class="sb"><b>Ваше место</b><span>'+esc(z.label)+'</span></div></div>';
   return h;

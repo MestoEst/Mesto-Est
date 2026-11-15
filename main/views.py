@@ -1,5 +1,9 @@
+import base64
+import binascii
 import json
+import logging
 from datetime import timedelta
+from decimal import Decimal, InvalidOperation
 
 from django.db.models import F, Sum
 from django.http import JsonResponse, HttpResponseNotFound
@@ -14,8 +18,10 @@ from django.contrib.auth import logout as auth_logout
 from django.db import transaction, IntegrityError
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
+from django.conf import settings
+from django.core.mail import EmailMessage
 
-from .models import ParkingSpot, SpotObservation, SpotHourStat, UserProfile, ParkingZone
+from .models import ParkingSpot, SpotObservation, SpotHourStat, UserProfile, ParkingZone, ContractCopy
 
 from .spot_identity import DATASET
 
@@ -162,7 +168,7 @@ def spots_geojson(request):
                 "appearance": s.appearance,
                 "code": s.code,
                 "block": s.block,
-                "is_occupied": s.is_occupied,
+                "is_occupied": False if s.is_occupied is None else s.is_occupied,   # нет данных = свободно
                 "updated_at": s.status_updated_at,
                 "usual_free_percent": stats.get(s.id),
             },
@@ -299,3 +305,84 @@ def me(request):
         "passport_masked": None,
         "owner": None
     })
+
+
+log = logging.getLogger(__name__)
+MAX_SIGNATURE_CHARS = 400_000           # ~300 КБ картинки в base64
+
+
+def owner_email_for(listing_id):
+    """Почта владельца места по номеру объявления. Объявлений на сервере пока нет (флаг listings выключен),
+    поэтому возвращаем None: владелец получит копию, когда появятся объявления и брони (docs/API.md, «Аренда»)."""
+    return None
+
+
+@require_POST
+def contract_copy(request):
+    """Принять договор с подписью, сохранить и выслать копию на почту человека (и владельца, когда его почта известна).
+    Адресат берётся только из аккаунта на сервере, не из запроса: иначе через этот адрес можно было бы слать письма кому угодно."""
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Войдите в аккаунт"}, status=401)
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, AttributeError):
+        return JsonResponse({"error": "invalid JSON"}, status=400)
+    if not isinstance(data, dict):
+        return JsonResponse({"error": "invalid JSON"}, status=400)
+
+    title = str(data.get("title") or "").strip()[:200]
+    booking_ref = str(data.get("booking_ref") or "").strip()[:50]
+    if not title or not booking_ref:
+        return JsonResponse({"error": "Не хватает данных договора"}, status=400)
+    try:
+        total = Decimal(str(data.get("total") or 0))
+        if total < 0 or total > Decimal("99999.99"):
+            raise InvalidOperation
+    except InvalidOperation:
+        return JsonResponse({"error": "Проверьте сумму договора"}, status=400)
+
+    sig = data.get("signature")
+    prefix = "data:image/png;base64,"
+    if not isinstance(sig, str) or not sig.startswith(prefix) or len(sig) > MAX_SIGNATURE_CHARS:
+        return JsonResponse({"error": "Поставьте подпись в окошке"}, status=400)
+    try:
+        png = base64.b64decode(sig[len(prefix):], validate=True)
+    except (binascii.Error, ValueError):
+        return JsonResponse({"error": "Подпись не читается"}, status=400)
+    if not png.startswith(b"\x89PNG"):
+        return JsonResponse({"error": "Подпись не читается"}, status=400)
+
+    place = str(data.get("place") or "").strip()[:100]
+    owner = str(data.get("owner") or "").strip()[:200]
+    when_text = str(data.get("when_text") or "").strip()[:200]
+    copy = ContractCopy.objects.create(
+        booking_ref=booking_ref, user=request.user, title=title, place=place, owner_name=owner,
+        when_text=when_text, total=total, signature=sig)
+
+    recipients = [request.user.email] if request.user.email else []
+    owner_email = owner_email_for(data.get("listing"))
+    if owner_email:
+        recipients.append(owner_email)
+    sent = False
+    if recipients:
+        name = (request.user.get_full_name() or request.user.email).strip()
+        body = (
+            "Договор аренды парковочного места принят в приложении «Место есть».\n\n"
+            f"Место: {title}" + (f", № {place}" if place else "") + "\n"
+            f"Владелец: {owner or 'не указан'}\n"
+            f"Пользователь: {name}\n"
+            f"Срок: {when_text or 'не указан'}\n"
+            f"Цена: {'бесплатно' if not total else str(total) + ' руб.'}\n\n"
+            "Подпись пользователя во вложении (podpis.png)."
+        )
+        mail = EmailMessage(subject=f"Договор аренды места: {title}", body=body,
+                            from_email=getattr(settings, "DEFAULT_FROM_EMAIL", None), to=recipients)
+        mail.attach("podpis.png", png, "image/png")
+        try:
+            mail.send(fail_silently=False)
+            sent = True
+            copy.emailed_to = recipients
+            copy.save(update_fields=["emailed_to"])
+        except Exception:                       # письмо не ушло: договор и подпись всё равно сохранены
+            log.exception("contract copy email failed for %s", booking_ref)
+    return JsonResponse({"ok": True, "id": copy.id, "emailed": sent}, status=201)

@@ -16,7 +16,7 @@
     return (location.protocol === 'file:' && !/Electron/.test(navigator.userAgent)) ? 'flat' : 'soft';
   }
 
-  var holder = null, map = null, markLayer = null, youMarker = null, items = [];
+  var holder = null, map = null, markLayer = null, youMarker = null, items = [], autoAsked = false;
 
   function ll(c) { return [c[1], c[0]]; }            /* [lng,lat] -> [lat,lng] */
   function cssVar(n, d) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim() || d; }
@@ -145,9 +145,10 @@
     map.fitBounds(L.latLngBounds([ll(z.bays[k].c)]), L.extend({ maxZoom: 20.5 }, padding()));
   }
 
-  function locate() {
-    touched = true;
-    if (!navigator.geolocation) { toast('Геолокация недоступна в этом браузере'); return; }
+  /* auto = true: тихий запрос при первом открытии карты (без сообщений и без смены вида, если человек уже двигал карту) */
+  function locate(auto) {
+    if (!auto) touched = true;
+    if (!navigator.geolocation) { if (!auto) toast('Геолокация недоступна в этом браузере'); return; }
     navigator.geolocation.getCurrentPosition(function (p) {
       var lat = p.coords.latitude, lng = p.coords.longitude;
       state.gps = { lat: lat, lng: lng, acc: Math.round(p.coords.accuracy) };
@@ -159,9 +160,9 @@
       if (youMarker) map.removeLayer(youMarker);
       youMarker = L.circleMarker([lat, lng], { radius: 8, color: '#fff', weight: 3, fillColor: '#1a73e8', fillOpacity: 1 }).addTo(map);
       if (allBounds().pad(0.5).contains([lat, lng])) map.setView([lat, lng], Math.max(map.getZoom(), 19));
-      else toast('Вы далеко от района');
+      else if (!auto) toast('Вы далеко от района');
       render();
-    }, function () { toast('Не удалось определить местоположение'); }, { enableHighAccuracy: true, timeout: 10000 });
+    }, function () { if (!auto) toast('Не удалось определить местоположение'); }, { enableHighAccuracy: true, timeout: 10000 });
   }
 
   MAP.attach = function () {
@@ -172,9 +173,16 @@
     slot.appendChild(holder);              /* карта создаётся один раз, при перерисовке переносится */
     if (first) init(); else map.invalidateSize(false);
     draw();
+    if (first && !autoAsked) {      /* геолокация нужна сайту: спрашиваем один раз при первом показе карты, если человек не запретил */
+      autoAsked = true;
+      var ask = function () { if (!touched) locate(true); };
+      if (navigator.permissions && navigator.permissions.query) navigator.permissions.query({ name: 'geolocation' }).then(function (r) { if (r.state !== 'denied') ask(); }, ask);
+      else ask();
+    }
   };
   MAP.reset = function(){if(map)map.remove();map=null;holder=null;items=[];touched=false;};
   MAP.draw = draw;
+  MAP.locate = locate;
   MAP.focusZone = focusZone;
   MAP.focusStreet = focusStreet;
   MAP.focusSpot = focusSpot;

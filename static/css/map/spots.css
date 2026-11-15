@@ -1,7 +1,7 @@
 /* Место есть: красивые места, машинки, номера, ряд мест в панели.
    Подключается после css/map/mesto-map.css. Цвета лежат в переменных, тёмная тема переопределяет их ниже. */
 :root{ --asph:#E4DFD2; --slot:#D3CDBD }
-:root[data-theme="dark"]{ --asph:#1E2318; --slot:#2D3426 }
+:root[data-theme="dark"]{ --asph:#242220; --slot:#34312C }
 
 /* ---- на карте ---- */
 .sc-car,.sp-num,.sp-zone{ background:none; border:0; pointer-events:none }

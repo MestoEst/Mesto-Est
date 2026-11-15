@@ -25,3 +25,20 @@ input[type=text]:not(.sw){}
 .demobox{margin-top:12px;border:1px dashed var(--ink2);border-radius:16px;padding:10px 12px;display:grid;gap:8px}
 @media (max-width:400px){ .slot{flex-wrap:wrap} .slot .sbody{flex-basis:calc(100% - 52px)} }
 .card .owncard{background:var(--bg)}
+
+/* подпись в окне брони */
+.sigbox{margin:12px 0}
+#sig{display:block;width:100%;height:110px;background:var(--bg);border:1.5px dashed var(--ink2);border-radius:16px;touch-action:none;cursor:crosshair}
+.sigrow{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+.sigimg{display:block;max-width:260px;width:100%;border-bottom:1px solid var(--line);margin-top:6px}
+:root[data-theme="dark"] #sig{background:#F2EFE8}
+/* выбор места на карте */
+.pickbtn{margin-top:10px;display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;font-size:15px}
+.pickbar{position:absolute;z-index:5;left:12px;right:12px;top:64px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--bg);border:1px solid var(--line);border-radius:20px;padding:12px 14px;box-shadow:0 6px 24px rgba(0,0,0,.18)}
+.pickbar .pt{flex:1 1 180px;min-width:0;display:grid;gap:2px}
+.pickbar .pt span{font-size:13px;color:var(--ink2)}
+.pickbar .cta{min-height:44px;font-size:15px;padding:0 18px;width:auto}
+.hint.bad{color:#B3261E;font-weight:500}
+:root[data-theme="dark"] .hint.bad{color:#F2A29B}
+/* аккаунт и регистрация: одна колонка нормальной ширины, без деления пополам */
+.narrow.acc{max-width:640px}
