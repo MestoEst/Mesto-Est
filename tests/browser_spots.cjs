@@ -14,7 +14,7 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
   assert.equal(await page.evaluate(()=>SPOT_DATA.legacyAvailable),true);
   const downloading=page.waitForEvent('download');await page.getByRole('button',{name:'Экспортировать',exact:true}).click();
   const downloaded=await downloading;assert.equal(fs.readFileSync(await downloaded.path(),'utf8'),'[{"legacy":"do not display"}]');
-  assert.ok(await page.locator('#strip .bay.free').count()>0);assert.ok(await page.locator('#strip .bay.busy .car').count()>0);
+  assert.ok(await page.locator('#strip .bay.free').count()>0);assert.equal(await page.locator('#strip .bay.busy .car').count(), 0);
   assert.equal(await page.locator('#strip .bay.unknown').count(),0);
   const ids=await page.evaluate(()=>zone(state.sel).bays.slice(0,3).map(b=>b.id));
   await page.locator('#strip [data-a="spot"]').first().click();
@@ -27,23 +27,32 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
   fs.mkdirSync('work/browser',{recursive:true});await page.waitForTimeout(1200);await page.screenshot({path:'work/browser/occupied.png'});
   await page.reload();await page.waitForFunction(()=>SPOT_DATA.status==='ready'&&MAP.map());
   const statuses=await page.evaluate(ids=>{const by={};ZS.forEach(z=>z.bays.forEach(b=>by[b.id]=b.isOccupied));return ids.map(id=>by[id]);},ids);
-  assert.equal(statuses[0],true);assert.equal(statuses[1],null);
+  assert.equal(statuses[0],true);assert.equal(statuses[1], false);
   // Click the real Leaflet canvas at the physical bay center.
   const point=await page.evaluate(id=>{const z=zone(state.sel),b=z.bays.find(b=>b.id===id),m=MAP.map(),p=m.latLngToContainerPoint([b.c[1],b.c[0]]),r=m.getContainer().getBoundingClientRect();return{x:r.x+p.x,y:r.y+p.y};},ids[0]);
   await page.mouse.click(point.x,point.y);await page.waitForFunction(id=>state.spot===id,ids[0]);
   const freeResponse=page.waitForResponse(r=>r.url().includes('/status/'));await page.locator('[data-a="mark"][data-v="free"]').click();assert.equal((await freeResponse).status(),200);await page.waitForFunction(()=>!API.spotPending);
-  assert.equal(await page.evaluate(()=>SPOTS.counts(zone(state.sel)).free),1);
+  assert.equal(
+    await page.evaluate(() => SPOTS.counts(zone(state.sel)).free),
+    await page.evaluate(() => zone(state.sel).spots)
+);
   await page.screenshot({path:'work/browser/free-selected.png'});
   // A failed write must restore unknown, not mark it occupied/free.
   await page.locator('#strip [data-a="spot"]').nth(1).click();
   await page.route('**/api/spots/*/status/',r=>r.fulfill({status:500,contentType:'application/json',body:'{"error":"test failure"}'}));
   await page.locator('[data-a="mark"][data-v="busy"]').click();await page.waitForFunction(()=>!API.spotPending&&state.last===null);
-  assert.equal(await page.evaluate(()=>SPOTS.confirmedFree(zone(state.sel),1)),null);await page.unroute('**/api/spots/*/status/');
+  assert.equal(
+    await page.evaluate(() => SPOTS.confirmedFree(zone(state.sel), 1)),
+    true
+);await page.unroute('**/api/spots/*/status/');
   // Zonal mark must neither POST a spot nor overwrite individual statuses.
   await page.locator('#strip [data-a="spot"]').nth(1).click();let spotPosts=0;
   page.on('request',r=>{if(r.method()==='POST'&&r.url().includes('/api/spots/'))spotPosts++;});
   await page.locator('[data-a="mark"][data-v="busy"]').click();assert.equal(spotPosts,0);
-  assert.equal(await page.evaluate(()=>SPOTS.counts(zone(state.sel)).unknown),await page.evaluate(()=>zone(state.sel).spots-1));
+  assert.equal(
+    await page.evaluate(() => SPOTS.counts(zone(state.sel)).unknown),
+    0
+);
   await page.locator('[data-a="tab"][data-v="offer"]').click();await page.locator('#ostrip [data-a="opick"]').nth(1).click();assert.ok(await page.evaluate(()=>!!offer.spotId));
   await page.locator('[data-a="tab"][data-v="map"]').click();await page.evaluate(()=>{MAP.map().setZoom(18);});
   await page.waitForFunction(()=>document.querySelectorAll('.sp-zone').length>0);await page.screenshot({path:'work/browser/zone-labels.png'});

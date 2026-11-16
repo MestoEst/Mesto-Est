@@ -10,9 +10,21 @@ if(slot) slot.innerHTML = '<div class="mapph"><div><b>Здесь будет ка
 }
 
 function mapPart(){ return '<div id="legendwrap">' + legend() + '</div>'; }
-function legend(){
-  if(state.layer !== 'places') return '';
-  return '<div class="legend"><span><i style="background:#C9F54E"></i>Свободно</span><span><i class="lg-car"></i>Занято, на месте машина</span><span>Без отметки — оценочное отображение</span><span>Номер места и машинки видны при приближении</span></div>';
+function legend() {
+  if (state.layer !== 'places') return '';
+
+  var explanation = state.mapFc
+    ? 'Прогноз: оценка на выбранное время'
+    : 'Без отметки место считается свободным';
+
+  return (
+    '<div class="legend">' +
+      '<span><i style="background:#C9F54E"></i>Свободно</span>' +
+      '<span><i class="lg-car"></i>Занято, на месте машина</span>' +
+      '<span>' + explanation + '</span>' +
+      '<span>Номер места и машинки видны при приближении</span>' +
+    '</div>'
+  );
 }
 
 var DEMO = true;   /* демо: отмечать можно без GPS. В боевой версии поставить false */
@@ -41,8 +53,8 @@ function dock(){
   }
   var last = state.marks.filter(function(m){ return m.zone === z.id; }).slice(-1)[0];
   var can = live && canMark(z), st = street(z.street), k = z.bays.findIndex(function(b){return b.id===state.spot;}); if(k<0) k=null;
-  var h = '<section class="dock"><div class="rowi"><span class="ico">'+ic('pin')+'</span><div class="rt"><small>'+esc(st ? st.name : 'Район')+'</small><b>'+esc(z.name)+'</b></div><span class="pill" title="При отсутствии отметок показана оценка, а не подтверждённый статус">шанс '+pct(z)+'%</span></div>' +
-    '<div class="stat"><div class="big">≈'+freeEst(z)+'</div><div class="bt"><b>из '+z.spots+' мест свободно</b><span>'+lvlText(z)+'</span></div></div><div class="tagrow'+(live ? ' live' : '')+'" style="margin:2px 2px 0">'+tag+'</div>' +
+  var h = '<section class="dock"><div class="rowi"><span class="ico">'+ic('pin')+'</span><div class="rt"><small>'+esc(st ? st.name : 'Район')+'</small><b>'+esc(z.name)+'</b></div><span class="pill" title="Доля свободных мест; в режиме прогноза — оценка">'+(live ? 'свободно ' : 'оценка ')+pct(z)+'%</span></div>' +
+    '<div class="stat"><div class="big">'+(live ? '' : '≈')+freeEst(z)+'</div><div class="bt"><b>из '+z.spots+' мест свободно</b><span>'+lvlText(z)+'</span></div></div><div class="tagrow'+(live ? ' live' : '')+'" style="margin:2px 2px 0">'+tag+'</div>' +
     SPOTS.strip(z) + SPOTS.spotRow(z);
   if(can){
     h += '<div class="markfor">Отметить: <b>'+(k != null ? 'место №'+z.bays[k].num : 'всю зону')+'</b></div>' +

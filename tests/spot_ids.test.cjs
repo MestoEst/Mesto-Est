@@ -30,12 +30,39 @@ const lastGood=snapshot();assert.throws(()=>c.applyCanonical(invalid),/мест�
 c.applyCanonical(data);Object.assign(c,{state:{mapFc:false,over:{},spot:null},document:{addEventListener:()=>{}},freeEst:()=>0,estimateFraction:()=>.5,clamp:(n,a,b)=>Math.max(a,Math.min(b,n))});
 vm.runInContext(fs.readFileSync('static/js/features/map/spots.js','utf8'),c);
 const z=c.ZS.find(z=>z.bays.length>=3),selected=z.bays[0].id,neighbor=z.bays[1].id;
-assert.equal(c.SPOTS.counts(z).unknown,z.bays.length);assert.equal(c.SPOTS.counts(z).free,0);
-assert.ok(z.bays.some((b,k)=>c.SPOTS.isFree(z,k)));assert.ok(z.bays.some((b,k)=>!c.SPOTS.isFree(z,k)));
-assert.ok(c.freeEst(z)>0);assert.equal(c.SPOTS.confirmedFree(z,0),null);
-c.SPOTS.setBay(z,0,true,'user');assert.equal(c.state.over[selected].busy,true);assert.equal(c.state.over[neighbor],undefined);
-assert.equal(c.SPOTS.counts(z).busy,1);assert.equal(c.SPOTS.counts(z).unknown,z.bays.length-1);
-c.SPOTS.setBay(z,1,false,'user');assert.equal(c.SPOTS.counts(z).free,1);
-z.bays.reverse();const k=z.bays.findIndex(b=>b.id===selected);assert.equal(c.SPOTS.isFree(z,k),false);
-c.state.spot=selected;
-console.log('PASS: 734 IDs, API-only data, preserved display geometry, persisted numbering/order, reorder/move/zone/add, atomic response validation, localStorage isolation, true/false/unknown counters.');
+assert.equal(c.SPOTS.counts(z).unknown, 0);
+assert.equal(c.SPOTS.counts(z).free, z.bays.length);
+
+assert.ok(
+  z.bays.every((b, k) => c.SPOTS.isFree(z, k))
+);
+assert.equal(c.freeEst(z), z.bays.length);
+assert.equal(c.SPOTS.confirmedFree(z, 0), true);
+assert.equal(c.SPOTS.isEstimate(z, 0), false);
+
+c.SPOTS.setBay(z, 0, true, 'user');
+
+assert.equal(c.state.over[selected].busy, true);
+assert.equal(c.state.over[neighbor], undefined);
+assert.equal(c.SPOTS.counts(z).busy, 1);
+assert.equal(c.SPOTS.counts(z).unknown, 0);
+assert.equal(c.SPOTS.counts(z).free, z.bays.length - 1);
+
+// Возврат к неизвестному прежнему значению трактуется как свободно.
+c.SPOTS.setBay(z, 0, null, 'server');
+assert.equal(c.SPOTS.confirmedFree(z, 0), true);
+assert.equal(c.SPOTS.counts(z).free, z.bays.length);
+
+// Проверяем, что перестановка массива не переносит отметку на соседа.
+c.SPOTS.setBay(z, 0, true, 'user');
+z.bays.reverse();
+
+const k = z.bays.findIndex(b => b.id === selected);
+assert.equal(c.SPOTS.isFree(z, k), false);
+
+c.state.mapFc = true;
+assert.equal(c.SPOTS.isEstimate(z, k), true);
+
+console.log(
+  'PASS: stable IDs, geometry, null-as-free, status isolation and forecast mode.'
+);

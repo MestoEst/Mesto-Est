@@ -4,13 +4,15 @@ from django.conf import settings
 
 class ParkingZone(models.Model):
     code = models.CharField(max_length=50, primary_key=True)
-    name = models.CharField(max_length=100)
-    display_number = models.PositiveIntegerField()
+    name = models.CharField(max_length=100, unique=True)
+    display_number = models.PositiveIntegerField(unique=True)
     display_order = models.PositiveIntegerField()
     street_id = models.CharField(max_length=50)
     street_name = models.CharField(max_length=100)
     appearance = models.JSONField(default=dict, blank=True)
 
+    def __str__(self):
+        return f"{self.name} · {self.street_name} [{self.code}]"
 
 class SpotIdentity(models.Model):
     """Append-only registry: even a deleted ParkingSpot must never free an ID."""
@@ -29,7 +31,7 @@ class ParkingSpot(models.Model):
     appearance = models.JSONField(default=dict, blank=True)
     block = models.CharField(max_length=50, blank=True)
     geometry = models.JSONField()
-    is_occupied = models.BooleanField(null=True)
+    is_occupied = models.BooleanField(default=False)
     status_updated_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:

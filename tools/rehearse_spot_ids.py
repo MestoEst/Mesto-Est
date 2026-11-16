@@ -43,7 +43,7 @@ with tempfile.TemporaryDirectory() as temp, ExitStack() as database_connections:
     OldObservation.objects.create(spot=collision_old,is_occupied=True)
     user=get_user_model().objects.create_user(username='retained-user',email='retained@example.test',password='test12345')
     profile=UserProfile.objects.create(user=user,phone='test')
-    before={s.pk:(s.code,s.geometry,s.is_occupied,s.status_updated_at,list(s.observations.values_list('pk','is_occupied')),list(s.hour_stats.values_list('pk','total','free'))) for s in OldSpot.objects.all()}
+    before={s.pk:(s.code,s.geometry,False if s.is_occupied is None else s.is_occupied,s.status_updated_at,list(s.observations.values_list('pk','is_occupied')),list(s.hour_stats.values_list('pk','total','free'))) for s in OldSpot.objects.all()}
     import subprocess
     schema_backup=Path(temp)/'before-schema.sqlite3'
     subprocess.run([sys.executable,str(ROOT/'tools/backup_sqlite.py'),'--source',str(database),'--output',str(schema_backup)],check=True)
@@ -79,7 +79,7 @@ with tempfile.TemporaryDirectory() as temp, ExitStack() as database_connections:
         assert not s.is_active
         assert before[s.pk]==(s.code,s.geometry,s.is_occupied,s.status_updated_at,list(s.observations.values_list('pk','is_occupied')),list(s.hour_stats.values_list('pk','total','free')))
     new=ParkingSpot.objects.get(dataset=DATASET,code=collision.code)
-    assert new.pk!=collision.pk and new.observations.count()==0 and new.is_occupied is None
+    assert new.pk!=collision.pk and new.observations.count()==0 and new.is_occupied is False
     assert get_user_model().objects.get(pk=user.pk).username=='retained-user'
     assert UserProfile.objects.get(pk=profile.pk).phone=='test'
     call_command('import_spots',canonical_path);call_command('import_spots',canonical_path)

@@ -24,7 +24,17 @@ function estimateFraction(z,t){
   t=t||T();var u=z.usual && z.usual[t.day] && z.usual[t.day][t.hour];
   return clamp((u!=null ? u/100 : 1-load(z,t))+shift(z,t),.02,.98);
 }
-function frac(z,t){return estimateFraction(z,t);}
+function frac(z, t) {
+  if (t || state.mapFc) {
+    return estimateFraction(z, t);
+  }
+
+  if (!z.bays.length) {
+    return 0;
+  }
+
+  return SPOTS.counts(z).free / z.bays.length;
+}
 function freeEst(z,t){return 0;} // SPOTS supplies the presentation count after loading.
 function pct(z,t){return Math.round(frac(z,t)*100);}
 function level(z){var c=frac(z);return c>=.6?'hi':c>=.35?'mid':'lo';}

@@ -46,7 +46,7 @@ class CanonicalSpotsTests(TestCase):
             source=expected[f['properties']['id']]
             self.assertEqual(f['geometry'],source['geometry'])
             for field in ['zone','display_number','display_order','row_id','appearance']:self.assertEqual(f['properties'][field],source['properties'][field])
-            self.assertIsNone(f['properties']['is_occupied'])
+            self.assertIs(f['properties']['is_occupied'], False)
         call_command('import_spots',self.write(api));self.assertEqual(ParkingSpot.objects.count(),734)
 
     def test_move_change_zone_and_add_does_not_change_id_or_history(self):
@@ -114,11 +114,11 @@ class CanonicalSpotsTests(TestCase):
         self.assertEqual(new.observations.count(),0);observation.refresh_from_db();self.assertEqual(observation.spot_id,old.pk)
         self.assertEqual(len(self.client.get('/api/spots/').json()['features']),3)
 
-    def test_exact_status_persists_after_reload_and_leaves_neighbor_unknown(self):
+    def test_exact_status_persists_after_reload_and_leaves_neighbor_free(self):
         d=self.small();call_command('import_spots',self.write(d));code=d['features'][0]['properties']['id']
         self.assertEqual(self.client.post(f'/api/spots/{code}/status/',data=json.dumps({'is_occupied':True}),content_type='application/json').status_code,200)
         api=self.client.get('/api/spots/').json();by={f['properties']['id']:f['properties'] for f in api['features']}
-        self.assertTrue(by[code]['is_occupied']);self.assertIsNone(by[d['features'][1]['properties']['id']]['is_occupied'])
+        self.assertTrue(by[code]['is_occupied']);self.assertIs(by[d['features'][1]['properties']['id']]['is_occupied'], False)
         spot=ParkingSpot.objects.get(dataset=DATASET,code=code);self.assertEqual(spot.observations.count(),1);self.assertEqual(spot.hour_stats.get().total,1)
         call_command('import_spots',self.write(d));spot.refresh_from_db();self.assertTrue(spot.is_occupied)
         self.assertEqual(self.client.post('/api/spots/absent/status/',data='{"is_occupied":true}',content_type='application/json').status_code,404)
@@ -145,3 +145,33 @@ class CanonicalSpotsTests(TestCase):
             self.assertAlmostEqual(Polygon(current).area,Polygon(previous).area/.92,places=7)
             angle=math.degrees(math.atan2(current[1][1]-current[0][1],current[1][0]-current[0][0]))
             self.assertLess(abs((angle-change['new_angle']+180)%360-180),1e-7)
+
+    def test_initial_free_status_does_not_create_observations(self):
+        call_command("import_spots", self.write(self.small()))
+
+        spots = ParkingSpot.objects.filter(dataset=DATASET)
+
+        self.assertEqual(spots.count(), 3)
+        self.assertFalse(
+            spots.exclude(is_occupied=False).exists()
+        )
+        self.assertFalse(
+            spots.exclude(status_updated_at=None).exists()
+        )
+        self.assertEqual(SpotObservation.objects.count(), 0)
+        self.assertEqual(SpotHourStat.objects.count(), 0)
+
+    def test_duplicate_zone_number_or_name_is_rejected(self):
+        for field in ("display_number", "name"):
+            with self.subTest(field=field):
+                data = self.small()
+                data["zones"][1][field] = data["zones"][0][field]
+
+                with self.assertRaises(CommandError):
+                    call_command(
+                        "import_spots",
+                        self.write(data),
+                    )
+
+                self.assertEqual(ParkingSpot.objects.count(), 0)
+                self.assertEqual(ParkingZone.objects.count(), 0)

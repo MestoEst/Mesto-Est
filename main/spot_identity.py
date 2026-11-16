@@ -42,18 +42,60 @@ def validate_geojson(data):
         raise CommandError('Ожидается канонический FeatureCollection с dataset=canonical-v1; архивные файлы запрещены')
     if not isinstance(data.get('zones'), list) or not data['zones'] or not isinstance(data.get('features'), list) or not data['features']:
         raise CommandError('Нужны непустые zones и features')
-    zones, numbers, orders = {}, set(), set()
-    for z in data['zones']:
-        if not isinstance(z, dict): raise CommandError('Некорректная зона')
-        code = identity(z.get('id'), 'zone.id')
-        n = positive(z.get('display_number'), code); order = positive(z.get('display_order'), code)
-        if code in zones or (z.get('street_id'),n) in numbers or order in orders:
-            raise CommandError(f'Повтор ID, номера или порядка зоны: {code}')
-        for field in ['name', 'street_id', 'street_name']:
-            if not isinstance(z.get(field), str) or not z[field].strip() or len(z[field]) > (50 if field == 'street_id' else 100):
-                raise CommandError(f'{code}: неверное поле {field}')
-        validate_appearance(z.get('appearance',{}), zone=True)
-        zones[code] = z; numbers.add((z['street_id'],n)); orders.add(order)
+    zones = {}
+    numbers = set()
+    orders = set()
+    names = set()
+
+    for z in data["zones"]:
+        if not isinstance(z, dict):
+            raise CommandError("Некорректная зона")
+
+        code = identity(z.get("id"), "zone.id")
+        number = positive(z.get("display_number"), code)
+        order = positive(z.get("display_order"), code)
+
+        for field in ("name", "street_id", "street_name"):
+            value = z.get(field)
+            max_length = 50 if field == "street_id" else 100
+
+            if (
+                    not isinstance(value, str)
+                    or not value.strip()
+                    or value != value.strip()
+                    or len(value) > max_length
+            ):
+                raise CommandError(
+                    f"{code}: неверное поле {field}"
+                )
+
+        if code in zones:
+            raise CommandError(f"Повтор ID зоны: {code}")
+
+        if number in numbers:
+            raise CommandError(
+                f"Повтор номера зоны: {number}"
+            )
+
+        if z["name"] in names:
+            raise CommandError(
+                f"Повтор названия зоны: {z['name']}"
+            )
+
+        if order in orders:
+            raise CommandError(
+                f"Повтор порядка зоны: {order}"
+            )
+
+        validate_appearance(
+            z.get("appearance", {}),
+            zone=True,
+        )
+
+        zones[code] = z
+        numbers.add(number)
+        names.add(z["name"])
+        orders.add(order)
     seen, numbers, orders, records = set(), set(), set(), []
     for i, f in enumerate(data['features'], 1):
         if not isinstance(f, dict) or f.get('type') != 'Feature' or not isinstance(f.get('properties'), dict):
