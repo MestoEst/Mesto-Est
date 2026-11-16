@@ -31,6 +31,7 @@ class ParkingSpot(models.Model):
     appearance = models.JSONField(default=dict, blank=True)
     block = models.CharField(max_length=50, blank=True)
     geometry = models.JSONField()
+    # Новые места свободны; неизвестные значения исправляются миграцией.
     is_occupied = models.BooleanField(default=False)
     status_updated_at = models.DateTimeField(null=True, blank=True)
 
@@ -80,3 +81,20 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return self.user.email
+
+
+class ContractCopy(models.Model):
+    """Договор аренды места, принятый в приложении: подпись и данные, чтобы выслать копию и найти её позже."""
+    booking_ref = models.CharField(max_length=50, db_index=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="contract_copies")
+    title = models.CharField(max_length=200)
+    place = models.CharField(max_length=100, blank=True)
+    owner_name = models.CharField(max_length=200, blank=True)
+    when_text = models.CharField(max_length=200, blank=True)
+    total = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    signature = models.TextField(blank=True)          # PNG, data URL (data:image/png;base64,...)
+    emailed_to = models.JSONField(default=list, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return f"{self.booking_ref}: {self.title}"

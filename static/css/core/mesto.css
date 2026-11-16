@@ -9,18 +9,18 @@
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     color-scheme:dark;
-    --bg:#0B0D0A; --surface:#161914; --ink:#F1F3EC; --ink2:#9CA297; --line:#262A22; --lime:#C9F54E; --lime-tint:#25301A;
-    --btn-bg:#F1F3EC; --btn-fg:#0E100D; --dock:linear-gradient(135deg,#2B3A1C 0%,#1D2617 55%,#161914 100%); --soft:rgba(255,255,255,.09);
-    --z-hi:#C9F54E; --z-mid:#78856A; --z-lo:#4E5347;
-    --land:#14170F; --road:#242920; --roadline:#2D3327; --bldg:#22261D; --bldg-s:#2D3227; --court:#19231A; --tree:#273520; --water:#1E3441; --play:#2A2F24;
+    --bg:#141311; --surface:#1F1E1B; --ink:#F2EFE8; --ink2:#A39F95; --line:#2E2C28; --lime:#A9C85A; --lime-tint:#2B2C22;
+    --btn-bg:#F2EFE8; --btn-fg:#141311; --dock:linear-gradient(135deg,#2B2925 0%,#222120 55%,#1B1A18 100%); --soft:rgba(255,255,255,.08);
+    --z-hi:#A9C85A; --z-mid:#8A8579; --z-lo:#55524B;
+    --land:#1B1A17; --road:#292723; --roadline:#34312C; --bldg:#26241F; --bldg-s:#312E28; --court:#22211C; --tree:#2A2B23; --water:#25323A; --play:#2D2A24;
   }
 }
 :root[data-theme="dark"]{
   color-scheme:dark;
-  --bg:#0B0D0A; --surface:#161914; --ink:#F1F3EC; --ink2:#9CA297; --line:#262A22; --lime:#C9F54E; --lime-tint:#25301A;
-  --btn-bg:#F1F3EC; --btn-fg:#0E100D; --dock:linear-gradient(135deg,#2B3A1C 0%,#1D2617 55%,#161914 100%); --soft:rgba(255,255,255,.09);
-  --z-hi:#C9F54E; --z-mid:#78856A; --z-lo:#4E5347;
-  --land:#14170F; --road:#242920; --roadline:#2D3327; --bldg:#22261D; --bldg-s:#2D3227; --court:#19231A; --tree:#273520; --water:#1E3441; --play:#2A2F24;
+  --bg:#141311; --surface:#1F1E1B; --ink:#F2EFE8; --ink2:#A39F95; --line:#2E2C28; --lime:#A9C85A; --lime-tint:#2B2C22;
+  --btn-bg:#F2EFE8; --btn-fg:#141311; --dock:linear-gradient(135deg,#2B2925 0%,#222120 55%,#1B1A18 100%); --soft:rgba(255,255,255,.08);
+  --z-hi:#A9C85A; --z-mid:#8A8579; --z-lo:#55524B;
+  --land:#1B1A17; --road:#292723; --roadline:#34312C; --bldg:#26241F; --bldg-s:#312E28; --court:#22211C; --tree:#2A2B23; --water:#25323A; --play:#2D2A24;
 }
 *,*::before,*::after{box-sizing:border-box}
 html{height:100%}

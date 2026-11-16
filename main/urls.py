@@ -13,6 +13,7 @@ urlpatterns = [
     path("api/auth/login/", views.login),
     path("api/auth/logout/", views.logout),
     path("api/me/", views.me),
+    path("api/contracts/", views.contract_copy),
 
     # Страницы сайта. Все отдают одно и то же приложение (mesto_prototype.html),
     # а какой раздел открыть, решает адрес (см. static/js/core/app.js, блок «адреса страниц»).

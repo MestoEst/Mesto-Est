@@ -43,6 +43,31 @@ function rentView(){
 
 /* ---------- бронь и договор (окно поверх страницы) ---------- */
 var bk = null, BOOK_DOCS = ['offer', 'contract', 'privacy'];
+function openBooking(){ openModal(bookingHtml()); sigDraw(); }
+/* подпись: рисуется на канве, хранится как картинка (data URL) в брони и уходит на сервер вместе с запросом */
+function sigDraw(){
+  var c = document.getElementById('sig'); if(!c || !bk || !bk.sig) return;
+  var img = new Image(); img.onload = function(){ c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); }; img.src = bk.sig;
+}
+(function(){
+  var drawing = false, ctx = null;
+  function pt(c, e){ var r = c.getBoundingClientRect(); return [(e.clientX - r.left) * c.width / r.width, (e.clientY - r.top) * c.height / r.height]; }
+  document.addEventListener('pointerdown', function(e){
+    var c = e.target.id === 'sig' ? e.target : null; if(!c || !bk) return;
+    drawing = true; ctx = c.getContext('2d'); ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#0E100D';
+    var p = pt(c, e); ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(p[0] + .1, p[1] + .1); ctx.stroke();
+    try { c.setPointerCapture(e.pointerId); } catch(err){} e.preventDefault();
+  });
+  document.addEventListener('pointermove', function(e){
+    if(!drawing) return; var c = document.getElementById('sig'); if(!c) return; var p = pt(c, e); ctx.lineTo(p[0], p[1]); ctx.stroke();
+  });
+  function stop(){
+    if(!drawing) return; drawing = false; var c = document.getElementById('sig'); if(!c || !bk) return;
+    bk.sig = c.toDataURL('image/png'); var st = document.querySelector('.sigrow .muted'); if(st) st.textContent = 'Подпись есть';
+  }
+  document.addEventListener('pointerup', stop); document.addEventListener('pointercancel', stop);
+})();
+act('sigclear', function(){ var c = document.getElementById('sig'); if(c) c.getContext('2d').clearRect(0, 0, c.width, c.height); if(bk) bk.sig = ''; var st = document.querySelector('.sigrow .muted'); if(st) st.textContent = 'Подписи пока нет'; });
 function bookingHtml(){
   var l = listing(bk.id), fm = [];
   if(l.free) fm.push(['free','Бесплатно']); if(l.hour) fm.push(['hour','Час']); if(l.day) fm.push(['day','Сутки']); if(l.month) fm.push(['month','Месяц']);
@@ -57,6 +82,8 @@ function bookingHtml(){
     (bk.fmt==='month' ? '' : '<div class="num" style="margin-bottom:6px"><span class="nm">'+(bk.fmt==='hour'?'Сколько часов':'Сколько суток')+'</span><div class="step"><button type="button"'+A('bq','-1')+' aria-label="Меньше">−</button><b>'+bk.qty+'</b><button type="button"'+A('bq','1')+' aria-label="Больше">+</button></div></div>') +
     '<div class="sum"><span class="muted">Итого</span><b>'+(total?money(total):'бесплатно')+'</b></div>' +
     '<div class="doc"><p><b>Договор сформируется автоматически</b></p><p>Из ваших данных и данных владельца. Вы принимаете его в приложении, владелец подтверждает запрос, и договор вступает в силу. Подписывать бумаги не нужно.</p><p><button type="button" class="linkbtn"'+A('doc','contract')+'>Посмотреть шаблон договора</button></p></div>' +
+    '<div class="sigbox"><div class="lbl" style="margin-bottom:6px">Ваша подпись</div><p class="muted sm" style="margin:0 0 8px">Нарисуйте подпись пальцем или мышью. Она подставится в договор. Копия договора придёт на почту вам и владельцу.</p>' +
+    '<canvas id="sig" width="640" height="220" aria-label="Поле для подписи"></canvas><div class="sigrow"><span class="muted sm">'+(bk.sig ? 'Подпись есть' : 'Подписи пока нет')+'</span><button type="button" class="chip"'+A('sigclear')+'>Очистить</button></div></div>' +
     consentHtml('book', BOOK_DOCS) +
     '<div class="two"><button type="button" class="cta ghost"'+A('close')+'>Отмена</button><button type="button" class="cta"'+A('send')+'>Отправить запрос</button></div>';
 }
@@ -68,6 +95,7 @@ function agreementHtml(b){
     '<p><b>Срок.</b> '+b.when+', '+b.qtyText+'. <b>Цена.</b> '+(b.total?money(b.total):'бесплатно')+'</p>' +
     '<p><b>Правила.</b> Один автомобиль, правила паркинга и ТС, фото состояния места при въезде и выезде.</p>' +
     '<p><b>Принят в приложении.</b> Пользователь: '+b.createdAt+'. Владелец: '+(b.acceptedAt||'ожидается')+'.</p>' +
+    (b.sig ? '<p><b>Подпись пользователя.</b></p><img class="sigimg" alt="Подпись пользователя" src="'+b.sig+'">' : '') +
     '</div>' +
     '<button type="button" class="cta" style="margin-top:12px"'+A('close')+'>Закрыть</button>';
 }
@@ -82,16 +110,17 @@ act('book', function(v){
   if(!state.user){ AUTH.needAccount('Чтобы бронировать, войдите в аккаунт'); return; }
   if(listing(v).mine){ toast('Это ваше место'); return; }
   if(!state.user.pid){ AUTH.needPassport('Чтобы бронировать, добавьте паспортные данные: они нужны для договора'); return; }
-  bk = {id:v, fmt:'', qty:1, date:ymd(new Date()), time:'19:00'}; openModal(bookingHtml());
+  bk = {id:v, fmt:'', qty:1, date:ymd(new Date()), time:'19:00'}; openBooking();
 });
-act('bf', function(v){ bk.fmt = v; bk.qty = 1; openModal(bookingHtml()); });
-act('bq', function(v){ bk.qty += Number(v); openModal(bookingHtml()); });
+act('bf', function(v){ bk.fmt = v; bk.qty = 1; openBooking(); });
+act('bq', function(v){ bk.qty += Number(v); openBooking(); });
 act('send', function(){
   var ce = consentCheck('book', BOOK_DOCS); if(ce){ toast(ce); return; }
   if(!bk.date){ toast('Выберите дату'); return; }
+  if(!bk.sig){ toast('Поставьте подпись в окошке'); return; }
   var qt = bk.fmt==='month' ? '1 мес.' : bk.qty+' '+(bk.fmt==='hour'?'ч':'сут.');
-  var nb = {id:'b'+(state.nextId++), listing:bk.id, fmt:bk.fmt, qty:bk.qty, qtyText:qt, when:fmtD(bk.date)+', с '+bk.time, total:bk.total, status:'request', createdAt:stamp()};
-  state.bookings.unshift(nb); emit('book', {booking:nb, fmt:bk.fmt, qty:bk.qty, date:bk.date, time:bk.time});
+  var nb = {id:'b'+(state.nextId++), listing:bk.id, fmt:bk.fmt, qty:bk.qty, qtyText:qt, when:fmtD(bk.date)+', с '+bk.time, total:bk.total, status:'request', createdAt:stamp(), sig:bk.sig};
+  state.bookings.unshift(nb); emit('book', {booking:nb, fmt:bk.fmt, qty:bk.qty, date:bk.date, time:bk.time, signature:bk.sig, mailTo:[state.user.email]});
   consentReset('book'); closeModal(); state.tab = 'rent'; render(true); toast('Запрос отправлен владельцу');
 });
 act('ans', function(v){

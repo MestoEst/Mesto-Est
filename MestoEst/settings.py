@@ -127,9 +127,17 @@ SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
 
-MAILERS = {
-    'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
-    },
-}
+
+
+# Письма (копия договора). По умолчанию письмо печатается в консоль сервера: удобно для разработки.
+# Чтобы слать по-настоящему, задайте переменные окружения (значения подставьте свои, в репозиторий их не кладём):
+#   MESTO_EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+#   MESTO_EMAIL_HOST, MESTO_EMAIL_PORT, MESTO_EMAIL_USER, MESTO_EMAIL_PASSWORD, MESTO_EMAIL_FROM
+EMAIL_BACKEND = os.environ.get('MESTO_EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
+EMAIL_HOST = os.environ.get('MESTO_EMAIL_HOST', 'localhost')
+EMAIL_PORT = int(os.environ.get('MESTO_EMAIL_PORT', '587'))
+EMAIL_HOST_USER = os.environ.get('MESTO_EMAIL_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('MESTO_EMAIL_PASSWORD', '')
+EMAIL_USE_TLS = os.environ.get('MESTO_EMAIL_TLS', '1') == '1'
+DEFAULT_FROM_EMAIL = os.environ.get('MESTO_EMAIL_FROM', 'Место есть <noreply@mestoest.local>')
 
