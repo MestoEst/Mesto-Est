@@ -10,12 +10,25 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
   await page.addInitScript(()=>{const Native=Date,at=Date.parse('2026-11-12T07:56:00Z');window.Date=class extends Native{constructor(...args){super(...(args.length?args:[at]));}};});
   await page.route('**/api/spots/',async route=>{const response=await route.fetch(),body=await response.json();body.features.forEach(f=>f.properties.is_occupied=null);await route.fulfill({response,json:body});});
   await page.goto(process.env.SPOT_TEST_URL+'/map?map=flat');await page.waitForFunction(()=>SPOT_DATA.status==='ready'&&MAP.map());await page.waitForTimeout(2200);
-  const expected=['free','busy','busy','free','busy','free','busy','free','free','free'];
-  assert.equal(await page.evaluate(()=>zone(state.sel).label),'ул. Небесная, зона 16');
-  assert.equal(await page.evaluate(()=>freeEst(zone(state.sel))),6);
-  assert.equal(await page.locator('#strip .car').count(),4);
-  assert.deepEqual(await page.locator('#strip .bay').evaluateAll(es=>es.map(e=>e.classList.contains('free')?'free':'busy')),expected);
-  assert.equal(await page.evaluate(()=>SPOTS.counts(zone(state.sel)).unknown),10,'Appearance must not turn estimates into observations');
+  const selected = await page.evaluate(() => {
+    const z = zone(state.sel);
+    return {name: z.name, num: z.num, spots: z.spots};
+  });
+
+  assert.equal(selected.name, 'Зона ' + selected.num);
+  assert.equal(
+    await page.evaluate(() => freeEst(zone(state.sel))),
+    selected.spots
+  );
+  assert.equal(await page.locator('#strip .car').count(), 0);
+  assert.equal(
+    await page.locator('#strip .bay.free').count(),
+    selected.spots
+  );
+  assert.equal(
+    await page.evaluate(() => SPOTS.counts(zone(state.sel)).unknown),
+    0
+  );
   for(const theme of ['light','dark']){
    await page.locator(`[data-a="theme"][data-v="${theme}"]`).click();await page.waitForTimeout(150);
    const palette=await page.evaluate(()=>({halo:getComputedStyle(document.documentElement).getPropertyValue('--asph').trim(),actual:[...new Set(Object.values(MAP.map()._layers).filter(l=>l.options&&l.options.weight>10&&l._latlngs).map(l=>l.options.color))]}));

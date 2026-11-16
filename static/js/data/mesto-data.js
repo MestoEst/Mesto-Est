@@ -22,8 +22,35 @@ function applyCanonical(data){
   if(!data || data.type!=='FeatureCollection' || data.dataset!=='canonical-v1' || !Array.isArray(data.zones) || !Array.isArray(data.features) || !data.features.length) throw new Error('В базе нет канонических мест. Требуется импорт набора.');
   var zones={},ids={},numbers={},orders={},list=[];
   data.zones.forEach(function(p){
-    if(!p.id || zones[p.id] || !Number.isInteger(p.display_order)) throw new Error('Некорректные зоны API');
-    zones[p.id]={id:p.id,name:'Зона '+p.display_number,title:p.name,num:p.display_number,displayOrder:p.display_order,street:p.street_id,streetName:p.street_name,label:p.street_name+', зона '+p.display_number,type:'perimeter',bays:[],bc:[],rl:[],rank:[],profile:(p.appearance||{}).profile||'home',j:(p.appearance||{}).offset||0};
+    if (
+      !p.id ||
+      zones[p.id] ||
+      typeof p.name !== 'string' ||
+      !p.name.trim() ||
+      !Number.isInteger(p.display_number) ||
+      p.display_number < 1 ||
+      !Number.isInteger(p.display_order) ||
+      p.display_order < 1
+    ) {
+      throw new Error('Некорректные зоны API');
+    }
+    zones[p.id] = {
+      id: p.id,
+      name: p.name,
+      title: p.name,
+      num: p.display_number,
+      displayOrder: p.display_order,
+      street: p.street_id,
+      streetName: p.street_name,
+      label: p.street_name + ', ' + p.name,
+      type: 'perimeter',
+      bays: [],
+      bc: [],
+      rl: [],
+      rank: [],
+      profile: (p.appearance || {}).profile || 'home',
+      j: (p.appearance || {}).offset || 0
+    };
   });
   data.features.forEach(function(f){
     var p=f.properties||{},z=zones[p.zone],g=f.geometry;

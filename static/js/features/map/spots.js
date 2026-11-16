@@ -5,7 +5,9 @@
         номера мест, подписи зон и улиц, демо-движение машин.
    Если Leaflet не загрузился, слой 2 не включается, а слой 1 (ряд мест в панели) продолжает работать.
 
-   Подтверждённые статусы приходят из API. Для null используется прежнее оценочное оформление main; оно не записывается в базу. */
+      Текущий статус берётся из API.
+   Неизвестный статус считается свободным.
+   Оценочное оформление используется только в режиме прогноза. */
 var SPOTS = (function(){
   var MIN_ZOOM = 18, NUM_ZOOM = 19.5, ZONE_ZOOM = 17.5, GAP_M = 0.43;
   var BODY = [['#1d211b', '#2a2f27'], ['#f2f2ed', '#e1e1da'], ['#a9aea4', '#bfc3b9'], ['#2e4259', '#3b536f'], ['#6f3039', '#843d48'], ['#c9ccc4', '#d9dcd4']];
@@ -72,11 +74,16 @@ var SPOTS = (function(){
 
   /* ---------- состояние: свободно или занято ---------- */
   function over(z,k){ return state.over[key(z,k)]; }
-  function confirmedFree(z,k){
-    var o=over(z,k),busy=o ? o.busy : z.bays[k].isOccupied;
-    return busy==null ? true : !busy;   /* нет данных (unknown / null в базе) = свободно: все места по умолчанию зелёные */
+    function confirmedFree(z, k) {
+    var o = over(z, k);
+    var busy = o ? o.busy : z.bays[k].isOccupied;
+
+    return busy !== true;
   }
-  function isEstimate(z,k,t){return !!t || state.mapFc || confirmedFree(z,k)===null;}
+
+  function isEstimate(z, k, t) {
+    return Boolean(t || state.mapFc);
+  }
   function isFree(z,k,t){
     if(!t && !state.mapFc){var actual=confirmedFree(z,k);if(actual!==null)return actual;}
     var score=z.bays[k].appearance.score;
