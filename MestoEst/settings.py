@@ -127,11 +127,7 @@ SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
 
-MAILERS = {
-    'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
-    },
-}
+
 
 # Письма (копия договора). По умолчанию письмо печатается в консоль сервера: удобно для разработки.
 # Чтобы слать по-настоящему, задайте переменные окружения (значения подставьте свои, в репозиторий их не кладём):
