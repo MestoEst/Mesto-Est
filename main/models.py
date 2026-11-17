@@ -78,9 +78,55 @@ class UserProfile(models.Model):
     phone = models.CharField(max_length=30)
     user_agreement = models.BooleanField(default=False)
     privacy_policy = models.BooleanField(default=False)
+    is_owner = models.BooleanField(default=False)
+    owner_status = models.CharField(
+        max_length=20,
+        default="none",
+        choices=[
+            ("none", "Не является владельцем"),
+            ("draft", "Черновик"),
+            ("pending", "На проверке"),
+            ("verified", "Подтверждён"),
+            ("rejected", "Отклонён"),
+        ],
+    )
+    parking = models.CharField(max_length=50, default="other")
+    addr = models.CharField(max_length=255, blank=True)
+    place = models.CharField(max_length=100, blank=True)
+    reject_reason = models.TextField(blank=True)
+    owner_submitted_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return self.user.email
+
+class OwnerDocument(models.Model):
+    DOCUMENT_TYPES = [
+        ("title", "Документ на право владения"),
+        ("tp", "Технический паспорт"),
+        ("other", "Дополнительный документ"),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="owner_documents",
+    )
+    kind = models.CharField(max_length=10, choices=DOCUMENT_TYPES)
+    file = models.FileField(upload_to="owner_documents/%Y/%m/")
+    name = models.CharField(max_length=255)
+    size = models.PositiveIntegerField()
+    uploaded_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "kind"],
+                name="unique_owner_document_type",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.user.email} — {self.get_kind_display()}"
 
 
 class ContractCopy(models.Model):

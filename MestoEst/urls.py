@@ -11,10 +11,4 @@ urlpatterns = [
     path('', include('main.urls')),
 ]
 
-# подключение статик
-# if settings.DEBUG:
-#     urlpatterns += static(settings.STATIC_URL, document_root=settings.BASE_DIR / 'static')
-# else:
-#     handler404 = page_not_found  # обработчик 404
-
 

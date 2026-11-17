@@ -2,15 +2,16 @@ import base64
 import binascii
 import json
 import logging
+import os
 from datetime import timedelta
 from decimal import Decimal, InvalidOperation
 
 from django.db.models import F, Sum
-from django.http import JsonResponse, HttpResponseNotFound
+from django.http import JsonResponse, HttpResponseNotFound, HttpResponse, FileResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import require_GET, require_POST, require_http_methods
 from django.template.loader import render_to_string
 from django.contrib.auth import get_user_model, authenticate
 from django.contrib.auth import login as auth_login
@@ -20,8 +21,17 @@ from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from django.conf import settings
 from django.core.mail import EmailMessage
-
-from .models import ParkingSpot, SpotObservation, SpotHourStat, UserProfile, ParkingZone, ContractCopy
+from django.core.files.storage import default_storage
+from django.contrib.admin.views.decorators import staff_member_required
+from .models import (
+    ParkingSpot,
+    SpotObservation,
+    SpotHourStat,
+    UserProfile,
+    ParkingZone,
+    ContractCopy,
+    OwnerDocument,
+)
 
 from .spot_identity import DATASET
 
@@ -30,6 +40,30 @@ DAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
 WINDOW_DAYS = 56
 MIN_SAMPLES = 5
 
+def owner_payload(profile):
+    submitted_at = profile.owner_submitted_at
+
+    return {
+        "is_owner": profile.is_owner,
+        "status": profile.owner_status,
+        "parking": profile.parking,
+        "addr": profile.addr,
+        "place": profile.place,
+        "reject_reason": profile.reject_reason,
+        "submitted_at": (
+            timezone.localtime(submitted_at).strftime("%d.%m %H:%M")
+            if submitted_at else ""
+        ),
+        "documents": [
+            {
+                "id": doc.id,
+                "kind": doc.kind,
+                "name": doc.name,
+                "size": doc.size,
+            }
+            for doc in profile.user.owner_documents.order_by("id")
+        ],
+    }
 
 @require_POST
 def register(request):
@@ -114,7 +148,7 @@ def register(request):
         "passport_set": False,
         "pid_masked": None,
         "passport_masked": None,
-        "owner": None
+        "owner": owner_payload(user.profile)
     }, status=201)
 
 
@@ -274,7 +308,7 @@ def login(request):
         "passport_set": False,
         "pid_masked": None,
         "passport_masked": None,
-        "owner": None
+        "owner": owner_payload(profile)
     })
 
 @require_POST
@@ -303,8 +337,256 @@ def me(request):
         "passport_set": False,
         "pid_masked": None,
         "passport_masked": None,
-        "owner": None
+        "owner": owner_payload(profile)
     })
+
+@require_http_methods(["GET", "PUT"])
+def owner_detail(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Войдите в аккаунт"}, status=401)
+
+    profile = request.user.profile
+
+    if request.method == "GET":
+        return JsonResponse(owner_payload(profile))
+
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({"error": "Некорректный JSON"}, status=400)
+
+    if not isinstance(data, dict):
+        return JsonResponse({"error": "Некорректные данные"}, status=400)
+
+    is_owner = data.get("is_owner")
+    parking = data.get("parking")
+    addr = data.get("addr", "")
+    place = data.get("place", "")
+
+    if not isinstance(is_owner, bool):
+        return JsonResponse({"error": "Некорректное значение is_owner"}, status=400)
+
+    if parking not in ("s1", "s2", "s3", "s4", "s5", "other"):
+        return JsonResponse({"error": "Некорректный тип парковки"}, status=400)
+
+    if not all(isinstance(value, str) for value in (addr, place)):
+        return JsonResponse({"error": "Адрес и описание должны быть строками"}, status=400)
+
+    profile.is_owner = is_owner
+    profile.parking = parking
+    profile.addr = addr.strip()
+    profile.place = place.strip()
+
+    if not is_owner:
+        profile.owner_status = "none"
+        profile.owner_submitted_at = None
+        profile.reject_reason = ""
+    elif profile.owner_status == "none":
+        profile.owner_status = "draft"
+
+    profile.save()
+
+    return JsonResponse(owner_payload(profile))
+
+
+MAX_OWNER_FILE_SIZE = 10 * 1024 * 1024
+
+OWNER_FILE_EXTENSIONS = {
+    ".pdf", ".jpg", ".jpeg", ".png", ".heic", ".webp"
+}
+
+
+def validate_owner_file(uploaded_file):
+    extension = os.path.splitext(uploaded_file.name)[1].lower()
+
+    if extension not in OWNER_FILE_EXTENSIONS:
+        return "Недопустимый формат файла"
+
+    if uploaded_file.size > MAX_OWNER_FILE_SIZE:
+        return "Размер файла не должен превышать 10 МБ"
+
+    header = uploaded_file.read(16)
+    uploaded_file.seek(0)
+
+    is_valid = (
+        (extension == ".pdf" and header.startswith(b"%PDF-"))
+        or (extension in (".jpg", ".jpeg") and header.startswith(b"\xff\xd8\xff"))
+        or (extension == ".png" and header.startswith(b"\x89PNG\r\n\x1a\n"))
+        or (
+            extension == ".webp"
+            and header.startswith(b"RIFF")
+            and header[8:12] == b"WEBP"
+        )
+        or (
+            extension == ".heic"
+            and header[4:8] == b"ftyp"
+            and header[8:12] in (b"heic", b"heix", b"hevc", b"hevx", b"mif1")
+        )
+    )
+
+    if not is_valid:
+        return "Содержимое файла не соответствует его формату"
+
+    return None
+
+
+@require_POST
+@transaction.atomic
+def owner_document_upload(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Войдите в аккаунт"}, status=401)
+
+    profile = request.user.profile
+
+    if not profile.is_owner:
+        return JsonResponse({"error": "Сначала включите режим владельца"}, status=400)
+
+    kind = request.POST.get("kind")
+    uploaded_file = request.FILES.get("file")
+
+    if kind not in ("title", "tp", "other"):
+        return JsonResponse({"error": "Неизвестный тип документа"}, status=400)
+
+    if not uploaded_file:
+        return JsonResponse({"error": "Выберите файл"}, status=400)
+
+    error = validate_owner_file(uploaded_file)
+
+    if error:
+        return JsonResponse({"error": error}, status=400)
+
+    old_document = OwnerDocument.objects.filter(
+        user=request.user,
+        kind=kind
+    ).first()
+
+    old_file_name = old_document.file.name if old_document else None
+
+    if old_document:
+        old_document.delete()
+
+    document = OwnerDocument.objects.create(
+        user=request.user,
+        kind=kind,
+        file=uploaded_file,
+        name=os.path.basename(uploaded_file.name.replace("\\", "/"))[:255],
+        size=uploaded_file.size,
+    )
+
+    if old_file_name:
+        transaction.on_commit(
+            lambda: default_storage.delete(old_file_name)
+        )
+
+    profile.owner_status = "draft"
+    profile.owner_submitted_at = None
+    profile.reject_reason = ""
+    profile.save(update_fields=[
+        "owner_status",
+        "owner_submitted_at",
+        "reject_reason",
+    ])
+
+    return JsonResponse({
+        "id": document.id,
+        "kind": document.kind,
+        "name": document.name,
+        "size": document.size,
+    }, status=201)
+
+
+@require_http_methods(["DELETE"])
+@transaction.atomic
+def owner_document_delete(request, document_id):
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Войдите в аккаунт"}, status=401)
+
+    document = get_object_or_404(
+        OwnerDocument,
+        pk=document_id,
+        user=request.user
+    )
+
+    file_name = document.file.name
+    document.delete()
+
+    profile = request.user.profile
+
+    if profile.owner_status in ("pending", "verified", "rejected"):
+        profile.owner_status = "draft"
+        profile.owner_submitted_at = None
+        profile.reject_reason = ""
+        profile.save(update_fields=[
+            "owner_status",
+            "owner_submitted_at",
+            "reject_reason",
+        ])
+
+    transaction.on_commit(
+        lambda: default_storage.delete(file_name)
+    )
+
+    return HttpResponse(status=204)
+
+
+@require_POST
+@transaction.atomic
+def owner_submit(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Войдите в аккаунт"}, status=401)
+
+    profile = request.user.profile
+
+    if not profile.is_owner:
+        return JsonResponse({"error": "Сначала включите режим владельца"}, status=400)
+
+    if not profile.place.strip():
+        return JsonResponse({"error": "Укажите описание парковочного места"}, status=400)
+
+    document_kinds = set(
+        request.user.owner_documents.values_list("kind", flat=True)
+    )
+
+    if not {"title", "tp"}.issubset(document_kinds):
+        return JsonResponse(
+            {"error": "Загрузите документ на право владения и технический паспорт"},
+            status=400
+        )
+
+    profile.owner_status = "pending"
+    profile.owner_submitted_at = timezone.now()
+    profile.reject_reason = ""
+
+    profile.save(update_fields=[
+        "owner_status",
+        "owner_submitted_at",
+        "reject_reason",
+    ])
+
+    return JsonResponse(owner_payload(profile))
+
+
+
+@staff_member_required
+@require_GET
+def owner_document_file(request, document_id):
+    document = get_object_or_404(OwnerDocument, pk=document_id)
+
+    if not document.file:
+        return HttpResponseNotFound("Файл не найден")
+
+    try:
+        file = document.file.open("rb")
+    except (FileNotFoundError, OSError):
+        return HttpResponseNotFound("Файл не найден")
+
+    response = FileResponse(
+        file,
+        as_attachment=False,
+        filename=document.name,
+    )
+    response["X-Content-Type-Options"] = "nosniff"
+    return response
 
 
 log = logging.getLogger(__name__)

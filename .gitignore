@@ -9,3 +9,4 @@ node_modules/
 # Local database and GeoJSON backups
 before-*.sqlite3
 *.geojson.before-*
+owner_documents/

@@ -1,8 +1,12 @@
 from django.contrib import admin
 from django.utils import timezone
+from django.urls import reverse
+from django.utils.html import format_html, format_html_join
+from django import forms
 
 from .models import (
     ContractCopy,
+    OwnerDocument,
     ParkingSpot,
     ParkingZone,
     SpotHourStat,
@@ -90,10 +94,104 @@ class SpotHourStatAdmin(admin.ModelAdmin):
     list_filter = ("weekday", "hour")
 
 
+class UserProfileAdminForm(forms.ModelForm):
+    class Meta:
+        model = UserProfile
+        fields = "__all__"
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        owner_status = cleaned_data.get("owner_status")
+        reject_reason = cleaned_data.get("reject_reason", "")
+
+        if owner_status == "rejected" and not reject_reason.strip():
+            self.add_error(
+                "reject_reason",
+                "Укажите причину отклонения заявки."
+            )
+
+        return cleaned_data
+
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ("user", "patronymic", "phone")
+    form = UserProfileAdminForm
+    list_display = ("user", "phone", "is_owner", "owner_status")
+    list_filter = ("is_owner", "owner_status")
     search_fields = ("user__email", "phone")
+
+
+    readonly_fields = (
+        "user",
+        "patronymic",
+        "phone",
+        "owner_documents_display",
+    )
+
+    fieldsets = (
+        ("Пользователь", {
+            "fields": ("user", "patronymic", "phone"),
+        }),
+        ("Данные владельца", {
+            "fields": (
+                "is_owner",
+                "owner_status",
+                "parking",
+                "addr",
+                "place",
+                "owner_submitted_at",
+                "reject_reason",
+                "owner_documents_display",
+            ),
+        }),
+    )
+
+    @admin.display(description="Документы владельца")
+    def owner_documents_display(self, obj):
+        if not obj or not obj.pk:
+            return "Сначала сохраните профиль"
+
+        documents = obj.user.owner_documents.all()
+
+        if not documents.exists():
+            return "Документы не загружены"
+
+        return format_html_join(
+            "",
+            '<div><b>{}</b>: <a href="{}" target="_blank" '
+            'rel="noopener noreferrer">Просмотреть</a></div>',
+            (
+                (
+                    document.get_kind_display(),
+                    reverse("owner_document_file", args=[document.pk]),
+                )
+                for document in documents
+            ),
+        )
+
+@admin.register(OwnerDocument)
+class OwnerDocumentAdmin(admin.ModelAdmin):
+    list_display = ("user", "kind", "name", "size", "uploaded_at")
+    list_filter = ("kind", "uploaded_at")
+    search_fields = ("user__email", "name")
+    readonly_fields = (
+        "user",
+        "kind",
+        "name",
+        "size",
+        "uploaded_at",
+        "file_link",
+    )
+
+    @admin.display(description="Файл")
+    def file_link(self, obj):
+        if not obj or not obj.pk or not obj.file:
+            return "Файл отсутствует"
+
+        return format_html(
+            '<a href="{}" target="_blank" rel="noopener noreferrer">Просмотреть документ</a>',
+            reverse("owner_document_file", args=[obj.pk]),
+        )
 
 
 @admin.register(ContractCopy)
@@ -107,3 +205,4 @@ class ContractCopyAdmin(admin.ModelAdmin):
     )
     search_fields = ("booking_ref", "title")
     readonly_fields = ("signature",)
+
